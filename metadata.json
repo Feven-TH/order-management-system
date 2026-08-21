@@ -1,0 +1,7 @@
+{
+  "name": "AtelierOS",
+  "description": "Bespoke tailoring and custom garment business management system with order tracking, measurement logs, financial analytics, customer CRM, and partner payables.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
