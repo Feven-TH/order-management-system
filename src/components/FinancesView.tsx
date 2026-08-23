@@ -90,19 +90,54 @@ export const FinancesView: React.FC<FinancesViewProps> = ({
     .filter((i) => i.category === 'Lining')
     .reduce((acc, i) => acc + i.stock * i.costPerUnit, 0);
   const trimsValue = inventory
-    .filter((i) => i.category === 'Trim' || i.category === 'Button')
+    .filter((i) => i.category === 'Trims & Buttons')
     .reduce((acc, i) => acc + i.stock * i.costPerUnit, 0);
   const otherMaterialsValue = Math.max(0, totalInventoryValuation - (fabricsValue + liningsValue + trimsValue));
 
-  // Monthly trends mock dataset matching realistic workshop seasonality
-  const chartData = [
-    { month: 'May', revenue: 28000, costs: 12000, profit: 16000 },
-    { month: 'Jun', revenue: 34000, costs: 14500, profit: 19500 },
-    { month: 'Jul', revenue: 31000, costs: 13000, profit: 18000 },
-    { month: 'Aug', revenue: 42000, costs: 17200, profit: 24800 },
-    { month: 'Sep', revenue: 38500, costs: 16000, profit: 22500 },
-    { month: 'Oct', revenue: totalRevenue, costs: totalCosts, profit: netProfit },
-  ];
+  const monthlyTotals = new Map<string, { month: string; revenue: number; costs: number; profit: number }>();
+  const monthFormatter = new Intl.DateTimeFormat('en', { month: 'short', year: '2-digit' });
+
+  const ensureMonth = (dateValue: string) => {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return null;
+
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const existing = monthlyTotals.get(key);
+
+    if (existing) return existing;
+
+    const entry = {
+      month: monthFormatter.format(date),
+      revenue: 0,
+      costs: 0,
+      profit: 0,
+    };
+    monthlyTotals.set(key, entry);
+
+    return entry;
+  };
+
+  orders.forEach((order) => {
+    const entry = ensureMonth(order.createdAt);
+    if (!entry) return;
+
+    const orderCosts = order.costs.reduce((acc, cost) => acc + cost.amount, 0);
+    entry.revenue += order.price;
+    entry.costs += orderCosts;
+    entry.profit = entry.revenue - entry.costs;
+  });
+
+  invoices.forEach((invoice) => {
+    const entry = ensureMonth(invoice.dueDate);
+    if (!entry) return;
+
+    entry.costs += invoice.amount;
+    entry.profit = entry.revenue - entry.costs;
+  });
+
+  const chartData = [...monthlyTotals.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, value]) => value);
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-6 md:py-8 space-y-8 animate-fadeIn pb-24 md:pb-16">
@@ -126,9 +161,9 @@ export const FinancesView: React.FC<FinancesViewProps> = ({
               onChange={(e) => setTimeframe(e.target.value as any)}
               className="bg-transparent text-xs font-bold text-[#211a15] dark:text-white outline-none cursor-pointer pr-1"
             >
-              <option value="month">This Month (October)</option>
-              <option value="quarter">Quarter 3 (Q3)</option>
-              <option value="year">Year to Date (2024)</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="year">Year to Date</option>
             </select>
           </div>
 
@@ -164,7 +199,7 @@ export const FinancesView: React.FC<FinancesViewProps> = ({
               <Wallet className="w-5 h-5" />
             </div>
             <span className="text-[11px] font-bold text-[#15803d] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
-              +12.5% vs last mo
+              Live total
             </span>
           </div>
           <div>
@@ -190,7 +225,7 @@ export const FinancesView: React.FC<FinancesViewProps> = ({
               <TrendingDown className="w-5 h-5" />
             </div>
             <span className="text-[11px] font-bold text-[#885000] bg-[#fff1e7] dark:bg-[#33261c] border border-[#d7c3b2]/40 px-2 py-0.5 rounded-full">
-              -2.1% vs last mo
+              Live total
             </span>
           </div>
           <div>

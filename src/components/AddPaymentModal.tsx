@@ -17,10 +17,10 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
   onClose,
   onAddPayment,
 }) => {
-  const [amount, setAmount] = useState('1000');
+  const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('Telebirr');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [note, setNote] = useState('Progress fitting installment');
+  const [note, setNote] = useState('');
 
   if (!isOpen || !order) return null;
 

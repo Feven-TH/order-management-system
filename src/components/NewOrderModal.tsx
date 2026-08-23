@@ -37,30 +37,18 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     preselectedCustomerId || customers[0]?.id || ''
   );
-  const [itemType, setItemType] = useState('Bespoke Dress');
-  const [price, setPrice] = useState('5000');
-  const [deposit, setDeposit] = useState('2500');
+  const [itemType, setItemType] = useState('');
+  const [price, setPrice] = useState('');
+  const [deposit, setDeposit] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Telebirr');
-  const [dueDate, setDueDate] = useState('2024-11-15');
-  const [description, setDescription] = useState(
-    'Tailored cocktail dress with French seams and draped waistline.'
-  );
+  const [dueDate, setDueDate] = useState('');
+  const [description, setDescription] = useState('');
 
   // Measurement modes
-  const [measurementMode, setMeasurementMode] = useState<'reuse' | 'new'>('reuse');
-  const [measurements, setMeasurements] = useState<OrderMeasurement>({
-    shoulder: 38,
-    bust: 92,
-    waist: 70,
-    hips: 98,
-    length: 120,
-    neck: 36,
-    sleeve: 60,
-  });
+  const [measurementMode, setMeasurementMode] = useState<'reuse' | 'new'>('new');
+  const [measurements, setMeasurements] = useState<OrderMeasurement>({});
 
-  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuAn3LRfeYmsYVcaqynTBIouRKUSWqVB0DNDuDkE-cmVFE3_xKjUx4MFTfTPIPqKJtyVNP91yGtINv2APqAW4Z_HVn3u9yi_hTekv06lUcXffzjbXG8gpWktMoVsqDgD1Kc770WjTPwdsnAxuBR7c4tHF12sle-76eh55Wt4E7X9m287aSQnptPE1e2wCnfgNfEW9cfQhsyo_YvCXplMXA0MJMjHtTmi4ZRiVucm7sgg1u2MXEbNaIOyWA',
-  ]);
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
 
   // Sync selectedCustomerId when modal opens or preselectedCustomerId changes
   useEffect(() => {
@@ -79,6 +67,50 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
 
   const selectedCustomer =
     customers.find((c) => c.id === selectedCustomerId) || customers[0];
+
+  if (!selectedCustomer) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+        <div className="bg-[#fff8f4] dark:bg-[#1c1510] text-[#211a15] dark:text-[#f7ebe1] rounded-xl border border-[#d7c3b2]/30 dark:border-[#524438] shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#d7c3b2]/20 dark:border-[#524438] flex justify-between items-center bg-white dark:bg-[#241a13]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#a6681c]/15 text-[#885000] dark:text-[#ffb86d] flex items-center justify-center">
+                <Scissors className="w-4 h-4" />
+              </div>
+              <h2 className="font-headline text-lg font-bold text-[#211a15] dark:text-white">
+                Create New Order
+              </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-full text-[#847466] dark:text-[#a08e80] hover:text-[#885000] dark:hover:text-[#ffb86d] hover:bg-[#ede0d6] dark:hover:bg-[#33261c] transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div className="rounded-lg border border-[#d7c3b2]/40 dark:border-[#524438] bg-white dark:bg-[#241a13] p-4">
+              <p className="font-headline text-base font-bold text-[#211a15] dark:text-white">
+                Add a customer first
+              </p>
+              <p className="mt-1 text-sm text-[#524438] dark:text-[#d7c3b2]">
+                Orders need to be attached to a customer profile.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenNewCustomer}
+              className="w-full bg-[#a6681c] hover:bg-[#885000] text-white font-headline text-sm font-semibold py-2.5 px-4 rounded-lg shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Customer</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleCustomerSelect = (id: string) => {
     setSelectedCustomerId(id);
@@ -306,14 +338,11 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
               ) : (
                 <div className="p-3 bg-[#fff8f4] dark:bg-[#1a120c] rounded-lg border border-[#d7c3b2]/20 dark:border-[#524438]/40 text-xs text-[#524438] dark:text-[#d7c3b2]">
                   <p className="font-semibold text-[#211a15] dark:text-white mb-1">
-                    Using profile for {selectedCustomer.name}:
+                    Previous measurements are not connected to customer profiles yet.
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono mt-2">
-                    <div className="p-1.5 bg-white dark:bg-[#241a13] rounded border border-[#d7c3b2]/20 dark:border-[#524438]">Shoulder: 38cm</div>
-                    <div className="p-1.5 bg-white dark:bg-[#241a13] rounded border border-[#d7c3b2]/20 dark:border-[#524438]">Bust: 92cm</div>
-                    <div className="p-1.5 bg-white dark:bg-[#241a13] rounded border border-[#d7c3b2]/20 dark:border-[#524438]">Waist: 70cm</div>
-                    <div className="p-1.5 bg-white dark:bg-[#241a13] rounded border border-[#d7c3b2]/20 dark:border-[#524438]">Hips: 98cm</div>
-                  </div>
+                  <p className="text-[#847466] dark:text-[#a08e80]">
+                    Enter measurements for this order.
+                  </p>
                 </div>
               )
             ) : (

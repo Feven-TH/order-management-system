@@ -27,10 +27,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [name, setName] = useState('');
   const [category, setCategory] = useState<InventoryItem['category']>('Fabric');
-  const [stock, setStock] = useState('20');
-  const [unit, setUnit] = useState('meters');
-  const [costPerUnit, setCostPerUnit] = useState('1200');
-  const [minStockLevel, setMinStockLevel] = useState('10');
+  const [stock, setStock] = useState('');
+  const [unit, setUnit] = useState('');
+  const [costPerUnit, setCostPerUnit] = useState('');
+  const [minStockLevel, setMinStockLevel] = useState('');
   const [supplier, setSupplier] = useState('');
 
   const totalInventoryValue = inventory.reduce(

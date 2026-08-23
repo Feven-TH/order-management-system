@@ -32,7 +32,7 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
       setNotes(customerToEdit.notes || '');
     } else {
       setName('');
-      setPhone('+251 9');
+      setPhone('');
       setAltPhone('');
       setEmail('');
       setAddress('');
@@ -103,7 +103,7 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Sarah Abebe"
+                placeholder="Customer name"
                 className="w-full pl-9 pr-3 py-2 bg-white dark:bg-[#241a13] border border-[#211a15]/15 dark:border-[#524438] rounded-lg text-sm text-[#211a15] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#885000]"
               />
             </div>

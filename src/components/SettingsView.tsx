@@ -27,7 +27,6 @@ import {
   extractColorsFromLogo,
   generateAccessibleTheme,
   applyThemeToDocument,
-  SAMPLE_ATELIER_LOGOS,
 } from '../utils/themeGenerator';
 
 interface SettingsViewProps {
@@ -93,27 +92,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSelectSampleLogo = async (sampleUrl: string) => {
-    setIsAnalyzingLogo(true);
-    try {
-      const { rawPalette } = await extractColorsFromLogo(sampleUrl);
-      const newTheme = generateAccessibleTheme(sampleUrl, rawPalette);
-      const updated: ShopProfile = {
-        ...profileDraft,
-        logoUrl: sampleUrl,
-        brandAccent: newTheme.primaryColor,
-        businessTheme: newTheme,
-      };
-      setProfileDraft(updated);
-      applyThemeToDocument(newTheme, profileDraft.theme === 'dark');
-      onUpdateProfile(updated);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAnalyzingLogo(false);
     }
   };
 
@@ -536,38 +514,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
         ) : null}
-
-        {/* Quick Test Samples */}
-        <div>
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#847466] dark:text-[#a08e80] mb-2">
-            Or test with curated bespoke atelier logos:
-          </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {SAMPLE_ATELIER_LOGOS.map((sample, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleSelectSampleLogo(sample.url)}
-                disabled={isAnalyzingLogo}
-                className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
-                  profileDraft.logoUrl === sample.url
-                    ? 'border-[#885000] bg-[#fff1e7] dark:bg-[#33261c] shadow-xs'
-                    : 'border-[#d7c3b2]/30 dark:border-[#524438] bg-white dark:bg-[#241a13] hover:border-[#885000]/50'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg shrink-0 overflow-hidden border border-black/10">
-                  <img src={sample.url} alt={sample.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-[#211a15] dark:text-white truncate">
-                    {sample.name}
-                  </p>
-                  <p className="text-[10px] text-[#847466] truncate">{sample.subtitle}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Re-analyze Button */}
         <div className="flex items-center gap-3 pt-2">

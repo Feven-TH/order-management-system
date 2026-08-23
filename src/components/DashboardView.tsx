@@ -135,7 +135,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <Wallet className="w-5 h-5" />
             </div>
             <span className="text-xs font-semibold text-green-700 bg-green-50 dark:bg-green-950/40 dark:text-green-400 px-2 py-0.5 rounded">
-              +12% vs last month
+              Live total
             </span>
           </div>
           <div>

@@ -365,17 +365,6 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                 ))}
               </div>
 
-              {/* Mannequin Illustration */}
-              <div className="sm:col-span-4 flex flex-col items-center justify-center p-3 bg-[#fff1e7]/40 dark:bg-[#33261c]/40 rounded-xl border border-[#d7c3b2]/20">
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5BIT7CC_qvVC82I86IJ69KqgUwV5AgdRNVZhhYXYP3-JJ48t-Nj9rzEhzf5nHDigq1IMgxiTLbu77t_V0jnVfSIn_0hcxSPdee5lTgSuBy8aiQwoTR3qpOZ026gsBbHS6bo3M-C2z6AssUomXYHaW5Ag4l7nRjUVVesKPJYegxTU0Xi-lZO7Ev8-hlNufK122M_8ejSHanvuPtjGgjc8_2G0dxEvPuDzNLt7BDcIfX3H-vN2FBI22iw"
-                  alt="Tailor silhouette guide"
-                  className="w-24 h-auto object-contain mix-blend-multiply dark:mix-blend-normal opacity-80"
-                />
-                <span className="text-[10px] text-[#847466] font-mono mt-1">
-                  Bespoke Body Map
-                </span>
-              </div>
             </div>
           </div>
         </div>

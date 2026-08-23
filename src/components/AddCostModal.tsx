@@ -20,8 +20,8 @@ export const AddCostModal: React.FC<AddCostModalProps> = ({
   onAddCost,
 }) => {
   const [costType, setCostType] = useState<OrderCost['costType']>('Telafi');
-  const [item, setItem] = useState('Pleating & Darting Crafts');
-  const [amount, setAmount] = useState('500');
+  const [item, setItem] = useState('');
+  const [amount, setAmount] = useState('');
   const [partnerId, setPartnerId] = useState(partners[0]?.id || '');
   const [status, setStatus] = useState<OrderCost['status']>('Unpaid');
   const [notes, setNotes] = useState('');
@@ -77,14 +77,7 @@ export const AddCostModal: React.FC<AddCostModalProps> = ({
             </label>
             <select
               value={costType}
-              onChange={(e) => {
-                const val = e.target.value as OrderCost['costType'];
-                setCostType(val);
-                if (val === 'Telafi') setItem('Hand Pleating & Telafi');
-                else if (val === 'Material') setItem('Silks & Lining Fabric');
-                else if (val === 'Manufacturing') setItem('Assembly & Seamstressing');
-                else if (val === 'Delivery') setItem('Client Garment Courier');
-              }}
+              onChange={(e) => setCostType(e.target.value as OrderCost['costType'])}
               className="w-full px-3 py-2 bg-white dark:bg-[#241a13] border border-[#211a15]/15 dark:border-[#524438] rounded-lg text-sm text-[#211a15] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#885000]"
             >
               <option value="Telafi">Telafi (Pleating & Traditional Crafts)</option>

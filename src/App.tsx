@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import {
   ActiveView,
@@ -26,9 +28,6 @@ import {
   INITIAL_SHOP_PROFILE,
 } from './data/initialData';
 import { Navigation } from './components/Navigation';
-import { LandingPage } from './components/LandingPage';
-import { AuthModal } from './components/AuthModal';
-import { OnboardingFlow } from './components/OnboardingFlow';
 import { DashboardView } from './components/DashboardView';
 import { OrdersView } from './components/OrdersView';
 import { OrderDetailsView } from './components/OrderDetailsView';
@@ -48,37 +47,57 @@ import { exportAllDataToExcel } from './utils/exportToExcel';
 import {
   applyThemeToDocument,
   generateAccessibleTheme,
-  SAMPLE_ATELIER_LOGOS,
 } from './utils/themeGenerator';
 
-export default function App() {
+type AppProps = {
+  adminEmail: string;
+  adminRole: 'superadmin' | 'admin';
+};
+
+const STORAGE_KEYS = {
+  profile: 'atelieros_admin_profile',
+  orders: 'atelieros_admin_orders',
+  customers: 'atelieros_admin_customers',
+  partners: 'atelieros_admin_partners',
+  invoices: 'atelieros_admin_invoices',
+  reminders: 'atelieros_admin_reminders',
+  inventory: 'atelieros_admin_inventory',
+};
+
+function readStoredJson<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+
+  const saved = window.localStorage.getItem(key);
+
+  if (!saved) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(saved) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+export default function App({ adminEmail, adminRole }: AppProps) {
   // Navigation & View State
   const [currentView, setCurrentView] = useState<ActiveView>('dashboard');
   const [previousView, setPreviousView] = useState<ActiveView>('dashboard');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [ordersFilter, setOrdersFilter] = useState<string>('All Orders');
 
-  // Authentication & Onboarding Modal State
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-
   // Workspace Data State with LocalStorage Caching
   const [shopProfile, setShopProfile] = useState<ShopProfile>(() => {
-    const saved = localStorage.getItem('atelieros_profile');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return {
-          ...INITIAL_SHOP_PROFILE,
-          ...parsed,
-          theme: parsed.theme || 'dark',
-        };
-      } catch {
-        return INITIAL_SHOP_PROFILE;
-      }
-    }
-    return INITIAL_SHOP_PROFILE;
+    const parsed = readStoredJson<Partial<ShopProfile>>(STORAGE_KEYS.profile, {});
+    return {
+      ...INITIAL_SHOP_PROFILE,
+      ...parsed,
+      email: adminEmail || parsed.email || INITIAL_SHOP_PROFILE.email,
+      theme: parsed.theme || 'dark',
+    };
   });
 
   const handleToggleTheme = () => {
@@ -91,7 +110,7 @@ export default function App() {
     let themeToApply = updated.businessTheme;
     if (!themeToApply) {
       themeToApply = generateAccessibleTheme(
-        updated.logoUrl || SAMPLE_ATELIER_LOGOS[1].url,
+        updated.logoUrl,
         [updated.brandAccent || '#885000', '#a6681c', '#fdbd72']
       );
     }
@@ -99,33 +118,27 @@ export default function App() {
   };
 
   const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('atelieros_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    return readStoredJson<Order[]>(STORAGE_KEYS.orders, INITIAL_ORDERS);
   });
 
   const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('atelieros_customers');
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
+    return readStoredJson<Customer[]>(STORAGE_KEYS.customers, INITIAL_CUSTOMERS);
   });
 
   const [partners, setPartners] = useState<Partner[]>(() => {
-    const saved = localStorage.getItem('atelieros_partners');
-    return saved ? JSON.parse(saved) : INITIAL_PARTNERS;
+    return readStoredJson<Partner[]>(STORAGE_KEYS.partners, INITIAL_PARTNERS);
   });
 
   const [invoices, setInvoices] = useState<PartnerInvoice[]>(() => {
-    const saved = localStorage.getItem('atelieros_invoices');
-    return saved ? JSON.parse(saved) : INITIAL_INVOICES;
+    return readStoredJson<PartnerInvoice[]>(STORAGE_KEYS.invoices, INITIAL_INVOICES);
   });
 
   const [reminders, setReminders] = useState<ReminderItem[]>(() => {
-    const saved = localStorage.getItem('atelieros_reminders');
-    return saved ? JSON.parse(saved) : INITIAL_REMINDERS;
+    return readStoredJson<ReminderItem[]>(STORAGE_KEYS.reminders, INITIAL_REMINDERS);
   });
 
   const [inventory, setInventory] = useState<InventoryItem[]>(() => {
-    const saved = localStorage.getItem('atelieros_inventory');
-    return saved ? JSON.parse(saved) : INITIAL_INVENTORY;
+    return readStoredJson<InventoryItem[]>(STORAGE_KEYS.inventory, INITIAL_INVENTORY);
   });
 
   // Modals & Dialogs State
@@ -156,7 +169,7 @@ export default function App() {
     let themeToApply = shopProfile.businessTheme;
     if (!themeToApply) {
       themeToApply = generateAccessibleTheme(
-        shopProfile.logoUrl || SAMPLE_ATELIER_LOGOS[1].url,
+        shopProfile.logoUrl,
         [shopProfile.brandAccent || '#885000', '#a6681c', '#fdbd72']
       );
     }
@@ -165,31 +178,31 @@ export default function App() {
 
   // LocalStorage sync effects
   useEffect(() => {
-    localStorage.setItem('atelieros_profile', JSON.stringify(shopProfile));
+    localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(shopProfile));
   }, [shopProfile]);
 
   useEffect(() => {
-    localStorage.setItem('atelieros_orders', JSON.stringify(orders));
+    localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
-    localStorage.setItem('atelieros_customers', JSON.stringify(customers));
+    localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(customers));
   }, [customers]);
 
   useEffect(() => {
-    localStorage.setItem('atelieros_partners', JSON.stringify(partners));
+    localStorage.setItem(STORAGE_KEYS.partners, JSON.stringify(partners));
   }, [partners]);
 
   useEffect(() => {
-    localStorage.setItem('atelieros_invoices', JSON.stringify(invoices));
+    localStorage.setItem(STORAGE_KEYS.invoices, JSON.stringify(invoices));
   }, [invoices]);
 
   useEffect(() => {
-    localStorage.setItem('atelieros_reminders', JSON.stringify(reminders));
+    localStorage.setItem(STORAGE_KEYS.reminders, JSON.stringify(reminders));
   }, [reminders]);
 
   useEffect(() => {
-    localStorage.setItem('atelieros_inventory', JSON.stringify(inventory));
+    localStorage.setItem(STORAGE_KEYS.inventory, JSON.stringify(inventory));
   }, [inventory]);
 
   // Keep selectedOrder in sync with orders list
@@ -382,46 +395,6 @@ export default function App() {
 
   const unreadRemindersCount = reminders.filter((r) => !r.completed).length;
 
-  // Render Public Showcase Landing if currentView === 'landing'
-  if (currentView === 'landing') {
-    return (
-      <>
-        <LandingPage
-          onEnterApp={() => setCurrentView('dashboard')}
-          onOpenAuth={(mode) => {
-            if (mode === 'signup') {
-              setIsOnboardingOpen(true);
-            } else {
-              setAuthMode('signin');
-              setIsAuthOpen(true);
-            }
-          }}
-        />
-        <AuthModal
-          isOpen={isAuthOpen}
-          initialMode={authMode}
-          onClose={() => setIsAuthOpen(false)}
-          onSuccess={(profileUpdate) => {
-            if (profileUpdate) {
-              setShopProfile((prev) => ({ ...prev, ...profileUpdate }));
-            }
-            setCurrentView('dashboard');
-          }}
-        />
-        <OnboardingFlow
-          isOpen={isOnboardingOpen}
-          initialShopProfile={shopProfile}
-          onClose={() => setIsOnboardingOpen(false)}
-          onComplete={(updated) => {
-            setShopProfile(updated);
-            setIsOnboardingOpen(false);
-            setCurrentView('dashboard');
-          }}
-        />
-      </>
-    );
-  }
-
   const activeOrdersCount = orders.filter(
     (o) => o.status !== 'Completed' && o.status !== 'Ready'
   ).length;
@@ -439,8 +412,13 @@ export default function App() {
         shopProfile={shopProfile}
         unreadRemindersCount={unreadRemindersCount}
         activeOrdersCount={activeOrdersCount}
-        onOpenLanding={() => setCurrentView('landing')}
-        onSignOut={() => setCurrentView('landing')}
+        canManageAdmins={adminRole === 'superadmin'}
+        onOpenAdmins={() => {
+          window.location.href = '/admins';
+        }}
+        onSignOut={() => {
+          window.location.href = '/logout';
+        }}
         onToggleTheme={handleToggleTheme}
       />
 
@@ -475,7 +453,13 @@ export default function App() {
                 handleUpdateOrder({ ...target, status: newStatus });
               }
             }}
-            onOpenMessageSender={handleOpenMessageSender}
+            onOpenMessageSender={(recipient) =>
+              handleOpenMessageSender(
+                recipient.name,
+                recipient.phone,
+                recipient.context || `Hello ${recipient.name}, this is a quick update about your order.`
+              )
+            }
             initialFilter={ordersFilter}
           />
         )}
@@ -571,7 +555,9 @@ export default function App() {
           <SettingsView
             shopProfile={shopProfile}
             onUpdateProfile={(updated) => setShopProfile(updated)}
-            onSignOut={() => setCurrentView('landing')}
+            onSignOut={() => {
+              window.location.href = '/logout';
+            }}
             onExportExcel={handleExportExcel}
           />
         )}
@@ -641,28 +627,6 @@ export default function App() {
         onClose={() => setMessageModalState((prev) => ({ ...prev, isOpen: false }))}
       />
 
-      <AuthModal
-        isOpen={isAuthOpen}
-        initialMode={authMode}
-        onClose={() => setIsAuthOpen(false)}
-        onSuccess={(profileUpdate) => {
-          if (profileUpdate) {
-            setShopProfile((prev) => ({ ...prev, ...profileUpdate }));
-          }
-          setCurrentView('dashboard');
-        }}
-      />
-
-      <OnboardingFlow
-        isOpen={isOnboardingOpen}
-        initialShopProfile={shopProfile}
-        onClose={() => setIsOnboardingOpen(false)}
-        onComplete={(updated) => {
-          setShopProfile(updated);
-          setIsOnboardingOpen(false);
-          setCurrentView('dashboard');
-        }}
-      />
     </div>
   );
 }
