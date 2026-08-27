@@ -13,10 +13,8 @@ export interface AdminProfile {
 
 export async function getCurrentAdmin(): Promise<AdminProfile | null> {
   const supabase = await createClient();
-  const {
-    data: { claims },
-    error: claimsError,
-  } = await supabase.auth.getClaims();
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const claims = claimsData?.claims;
 
   if (claimsError || !claims?.sub) {
     return null;
