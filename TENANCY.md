@@ -18,10 +18,10 @@ Two separate roles exist:
 1. Sign in with your platform superadmin account.
 2. Open `/admins`.
 3. Under **Create tenant owner**, enter the business name, owner email, and optionally their name.
-4. Select **Create tenant**.
-5. The owner receives an invitation email, follows the link, and finishes setting a password.
+4. Set a temporary password and select **Create tenant**.
+5. Share the credentials with the owner through your approved secure channel.
 
-The invitation creates, in one database transaction:
+Creating the account creates, in one database transaction:
 
 1. The Auth user.
 2. A `businesses` row.

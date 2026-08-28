@@ -4,33 +4,39 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSuperadmin } from '@/lib/auth/guards';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getAppUrl } from '@/lib/env';
 
 function adminsRedirect(params: Record<string, string>) {
   const query = new URLSearchParams(params);
   redirect(`/admins?${query.toString()}`);
 }
 
-export async function inviteAdmin(formData: FormData) {
+export async function createAdmin(formData: FormData) {
   await requireSuperadmin();
 
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const fullName = String(formData.get('full_name') || '').trim();
+  const password = String(formData.get('password') || '');
 
-  if (!email) {
-    adminsRedirect({ error: 'Email is required' });
+  if (!email || !password) {
+    adminsRedirect({ error: 'Email and password are required' });
+  }
+
+  if (password.length < 8) {
+    adminsRedirect({ error: 'Password must be at least 8 characters' });
   }
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    data: {
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
       full_name: fullName || null,
     },
-    redirectTo: `${getAppUrl()}/auth/callback`,
   });
 
   if (error || !data.user) {
-    adminsRedirect({ error: error?.message || 'Could not invite admin' });
+    adminsRedirect({ error: error?.message || 'Could not create admin' });
   }
 
   const { error: profileError } = await supabase.from('admin_profiles').upsert({
@@ -46,32 +52,39 @@ export async function inviteAdmin(formData: FormData) {
   }
 
   revalidatePath('/admins');
-  adminsRedirect({ message: `Invitation sent to ${email}` });
+  adminsRedirect({ message: `Admin account created for ${email}` });
 }
 
 /** Creates a tenant owner without granting any platform-admin privileges. */
-export async function inviteTenantOwner(formData: FormData) {
+export async function createTenantOwner(formData: FormData) {
   await requireSuperadmin();
 
   const businessName = String(formData.get('business_name') || '').trim();
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const fullName = String(formData.get('full_name') || '').trim();
+  const password = String(formData.get('password') || '');
 
-  if (!businessName || !email) {
-    adminsRedirect({ error: 'Business name and email are required' });
+  if (!businessName || !email || !password) {
+    adminsRedirect({ error: 'Business name, email, and password are required' });
   }
 
   if (businessName.length > 120) {
     adminsRedirect({ error: 'Business name must be 120 characters or less' });
   }
 
+  if (password.length < 8) {
+    adminsRedirect({ error: 'Password must be at least 8 characters' });
+  }
+
   const supabase = createAdminClient();
-  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    data: {
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
       business_name: businessName,
       full_name: fullName || null,
     },
-    redirectTo: `${getAppUrl()}/auth/callback`,
   });
 
   if (error || !data.user) {
@@ -81,7 +94,7 @@ export async function inviteTenantOwner(formData: FormData) {
   // The auth.users insert trigger creates the business, owner membership, and
   // default theme. Deliberately do not insert admin_profiles here.
   revalidatePath('/admins');
-  adminsRedirect({ message: `Tenant invitation sent to ${email}` });
+  adminsRedirect({ message: `Tenant owner account created for ${email}` });
 }
 
 export async function removeAdmin(formData: FormData) {

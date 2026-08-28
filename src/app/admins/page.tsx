@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { requireSuperadmin } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
-import { inviteAdmin, inviteTenantOwner, removeAdmin } from './actions';
+import { createAdmin, createTenantOwner, removeAdmin } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +37,7 @@ export default async function AdminsPage({ searchParams }: AdminsPageProps) {
               Admins
             </h1>
             <p className="mt-1 text-sm text-[#524438] dark:text-[#d7c3b2]">
-              Only superadmins can invite or remove admins.
+              Only superadmins can create tenant owners, create platform admins, or remove admins.
             </p>
           </div>
           <div className="inline-flex w-fit items-center gap-2 rounded-md border border-[#d7c3b2] dark:border-[#524438] bg-white dark:bg-[#1c1510] px-3 py-2 text-sm">
@@ -61,9 +61,9 @@ export default async function AdminsPage({ searchParams }: AdminsPageProps) {
         <section className="mb-8 rounded-lg border border-[#d7c3b2]/50 dark:border-[#524438] bg-white dark:bg-[#1c1510] p-5">
           <h2 className="font-headline text-lg font-bold">Create tenant owner</h2>
           <p className="mt-1 text-sm text-[#524438] dark:text-[#d7c3b2]">
-            Sends an invite and creates a separate business workspace. This person is not a platform admin.
+            Creates a separate business workspace with the password you set. This person is not a platform admin.
           </p>
-          <form action={inviteTenantOwner} className="mt-4 grid gap-3 sm:grid-cols-2">
+          <form action={createTenantOwner} className="mt-4 grid gap-3 sm:grid-cols-2">
             <input
               name="business_name"
               type="text"
@@ -84,6 +84,15 @@ export default async function AdminsPage({ searchParams }: AdminsPageProps) {
               placeholder="Owner name (optional)"
               className="rounded-md border border-[#d7c3b2] dark:border-[#524438] bg-[#fff8f4] dark:bg-[#241a13] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#a6681c]"
             />
+            <input
+              name="password"
+              type="password"
+              minLength={8}
+              required
+              placeholder="Temporary password"
+              autoComplete="new-password"
+              className="rounded-md border border-[#d7c3b2] dark:border-[#524438] bg-[#fff8f4] dark:bg-[#241a13] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#a6681c]"
+            />
             <button
               type="submit"
               className="inline-flex items-center justify-center gap-2 rounded-md bg-[#885000] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6d3e00]"
@@ -95,11 +104,11 @@ export default async function AdminsPage({ searchParams }: AdminsPageProps) {
         </section>
 
         <section className="mb-8 rounded-lg border border-[#d7c3b2]/50 dark:border-[#524438] bg-white dark:bg-[#1c1510] p-5">
-          <h2 className="font-headline text-lg font-bold">Invite admin</h2>
+          <h2 className="font-headline text-lg font-bold">Create admin</h2>
           <p className="mt-1 text-sm text-[#524438] dark:text-[#d7c3b2]">
             Platform admins can manage this screen. Do not use this for shop owners.
           </p>
-          <form action={inviteAdmin} className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <form action={createAdmin} className="mt-4 grid gap-3 sm:grid-cols-2">
             <input
               name="email"
               type="email"
@@ -113,12 +122,21 @@ export default async function AdminsPage({ searchParams }: AdminsPageProps) {
               placeholder="Full name"
               className="rounded-md border border-[#d7c3b2] dark:border-[#524438] bg-[#fff8f4] dark:bg-[#241a13] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#a6681c]"
             />
+            <input
+              name="password"
+              type="password"
+              minLength={8}
+              required
+              placeholder="Temporary password"
+              autoComplete="new-password"
+              className="rounded-md border border-[#d7c3b2] dark:border-[#524438] bg-[#fff8f4] dark:bg-[#241a13] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#a6681c]"
+            />
             <button
               type="submit"
               className="inline-flex items-center justify-center gap-2 rounded-md bg-[#a6681c] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#885000]"
             >
               <UserPlus className="h-4 w-4" />
-              Invite
+              Create admin
             </button>
           </form>
         </section>
