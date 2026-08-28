@@ -47,6 +47,7 @@ Use the Supabase SQL editor or Supabase CLI to run:
 - `supabase/migrations/202608230001_admin_auth.sql`
 - `supabase/migrations/202608280001_multi_tenancy.sql`
 - `supabase/migrations/202608280002_partner_payments.sql`
+- `supabase/migrations/202608280003_set_user_password.sql`
 
 5. Create a business account.
 

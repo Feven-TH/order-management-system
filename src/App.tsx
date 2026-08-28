@@ -46,9 +46,10 @@ import {
 type AppProps = {
   businessName: string;
   userEmail: string;
+  canManageAdmins: boolean;
 };
 
-export default function App({ businessName, userEmail }: AppProps) {
+export default function App({ businessName, userEmail, canManageAdmins }: AppProps) {
   // Navigation & View State
   const [currentView, setCurrentView] = useState<ActiveView>('dashboard');
   const [previousView, setPreviousView] = useState<ActiveView>('dashboard');
@@ -408,6 +409,10 @@ export default function App({ businessName, userEmail }: AppProps) {
         shopProfile={shopProfile}
         unreadRemindersCount={unreadRemindersCount}
         activeOrdersCount={activeOrdersCount}
+        canManageAdmins={canManageAdmins}
+        onOpenAdmins={() => {
+          window.location.href = '/admins';
+        }}
         onSignOut={() => {
           window.location.href = '/logout';
         }}

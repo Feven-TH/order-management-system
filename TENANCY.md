@@ -63,6 +63,18 @@ In Supabase Auth settings, set **Site URL** to this URL and add the exact
 `https://app.example.com/auth/callback` path to **Redirect URLs**. An invitation
 or confirmation redirect must be on that allow list.
 
+## Reset an existing user's password
+
+After applying `202608280003_set_user_password.sql`, a project administrator can
+run this in Supabase SQL Editor:
+
+```sql
+select public.set_user_password('owner@example.com', 'replace-with-a-strong-password');
+```
+
+The function confirms an unconfirmed email and changes only the password hash.
+It is not executable by normal authenticated users.
+
 ## Important current limitation
 
 The interface loads and saves workspace records through `/api/workspace`. This

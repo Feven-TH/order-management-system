@@ -11,6 +11,7 @@ import {
   Plus,
   LogOut,
   Globe,
+  UserCog,
   Menu,
   X,
   Shirt,
@@ -27,6 +28,8 @@ interface NavigationProps {
   unreadRemindersCount: number;
   activeOrdersCount?: number;
   onOpenLanding?: () => void;
+  canManageAdmins?: boolean;
+  onOpenAdmins?: () => void;
   onSignOut: () => void;
   onToggleTheme?: () => void;
 }
@@ -39,6 +42,8 @@ export const Navigation: React.FC<NavigationProps> = ({
   unreadRemindersCount,
   activeOrdersCount,
   onOpenLanding,
+  canManageAdmins,
+  onOpenAdmins,
   onSignOut,
   onToggleTheme,
 }) => {
@@ -153,6 +158,16 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         {/* Public Showcase & Sign Out Footer */}
         <div className="px-4 mt-auto pt-3 border-t border-[#d7c3b2]/20 space-y-2">
+          {canManageAdmins && onOpenAdmins && (
+            <button
+              onClick={onOpenAdmins}
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-2.5 rounded-lg text-xs font-semibold text-[#885000] dark:text-[#ffb86d] bg-[#fff8f4] dark:bg-[#241a13] border border-[#d7c3b2]/30 hover:bg-[#ede0d6]/60 transition-colors"
+            >
+              <UserCog className="w-3.5 h-3.5" />
+              <span>Manage platform</span>
+            </button>
+          )}
+
           {onOpenLanding && (
             <button
               onClick={onOpenLanding}
@@ -428,6 +443,19 @@ export const Navigation: React.FC<NavigationProps> = ({
 
             {/* Drawer Footer */}
             <div className="p-4 border-t border-[#d7c3b2]/20 space-y-2 bg-[#fff1e7]/40 dark:bg-[#150f0b]">
+              {canManageAdmins && onOpenAdmins && (
+                <button
+                  onClick={() => {
+                    setMobileDrawerOpen(false);
+                    onOpenAdmins();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold text-[#885000] dark:text-[#ffb86d] bg-white dark:bg-[#241a13] border border-[#d7c3b2]/40 hover:bg-[#ede0d6] transition-colors shadow-2xs"
+                >
+                  <UserCog className="w-3.5 h-3.5" />
+                  <span>Manage platform</span>
+                </button>
+              )}
+
               {onOpenLanding && (
                 <button
                   onClick={() => {
