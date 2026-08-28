@@ -45,7 +45,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     if (!name) return;
 
     const newItem: InventoryItem = {
-      id: `inv-item-${Date.now()}`,
+      id: crypto.randomUUID(),
       name,
       category,
       stock: parseFloat(stock) || 0,

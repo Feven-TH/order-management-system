@@ -36,7 +36,7 @@ export const AddCostModal: React.FC<AddCostModalProps> = ({
     if (parsedAmount <= 0) return;
 
     const newCost: OrderCost = {
-      id: `cost-${Date.now()}`,
+      id: crypto.randomUUID(),
       item: item || costType,
       costType: costType,
       amount: parsedAmount,

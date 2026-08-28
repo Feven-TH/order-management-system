@@ -46,6 +46,7 @@ Use the Supabase SQL editor or Supabase CLI to run:
 
 - `supabase/migrations/202608230001_admin_auth.sql`
 - `supabase/migrations/202608280001_multi_tenancy.sql`
+- `supabase/migrations/202608280002_partner_payments.sql`
 
 5. Create a business account.
 
@@ -80,6 +81,9 @@ Open `http://localhost:3000`. Unauthenticated users are redirected to `/login`.
 - Cross-root links use composite foreign keys. An order cannot reference another business's customer, and an order cost cannot reference another business's partner.
 - `src/lib/auth/tenant.ts` is the only server-side tenant resolver. New server actions and route handlers must call `requireTenant()` and derive their `businessId` from its return value, never request input.
 
+For superadmin provisioning, tenant-owner signup, and the isolation design, see
+[TENANCY.md](TENANCY.md).
+
 ## Scripts
 
 ```bash
@@ -89,9 +93,9 @@ npm run build      # Create a production build
 npm run start      # Start the production server after building
 ```
 
-## Current Data Storage
+## Data storage
 
-The prototype UI no longer persists domain records in browser storage, because
-browser storage is not safe across accounts sharing a device. The Supabase
-migration is the authoritative persistent schema; new data workflows must use
-server actions that call `requireTenant()`.
+Orders, customers, payments, costs, partners, reminders, inventory, themes, and
+business settings load from and persist to Supabase. The browser does not retain
+a demo dataset or use browser storage as a data store. Every workspace request
+is resolved from the authenticated user's business membership on the server.

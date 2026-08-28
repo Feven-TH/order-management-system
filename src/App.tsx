@@ -95,6 +95,54 @@ export default function App({ businessName, userEmail }: AppProps) {
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
 
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+
+  const persistWorkspaceChange = async (action: string, payload: unknown) => {
+    try {
+      const response = await fetch('/api/workspace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, payload }),
+      });
+
+      if (!response.ok) {
+        throw new Error('The database did not accept this change');
+      }
+    } catch (error) {
+      console.error(error);
+      window.alert('This change could not be saved to the database. Please refresh and try again.');
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkspace() {
+      try {
+        const response = await fetch('/api/workspace', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Could not load workspace');
+        const data = await response.json();
+        if (cancelled) return;
+        setShopProfile(data.shopProfile);
+        setOrders(data.orders || []);
+        setCustomers(data.customers || []);
+        setPartners(data.partners || []);
+        setInvoices(data.invoices || []);
+        setReminders(data.reminders || []);
+        setInventory(data.inventory || []);
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          window.alert('Could not load your Supabase workspace. Check that the tenant migration was applied.');
+        }
+      } finally {
+        if (!cancelled) setWorkspaceLoaded(true);
+      }
+    }
+
+    void loadWorkspace();
+    return () => { cancelled = true; };
+  }, []);
 
   // Modals & Dialogs State
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
@@ -154,6 +202,7 @@ export default function App({ businessName, userEmail }: AppProps) {
   const handleUpdateOrder = (updatedOrder: Order) => {
     setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
     setSelectedOrder(updatedOrder);
+    void persistWorkspaceChange('save_order', updatedOrder);
 
     // Update customer total balance if payment changed
     updateCustomerBalance(updatedOrder.customerId);
@@ -165,6 +214,7 @@ export default function App({ businessName, userEmail }: AppProps) {
       setSelectedOrder(null);
       setCurrentView(previousView || 'dashboard');
     }
+    void persistWorkspaceChange('delete_order', { id: orderId });
   };
 
   const handleCreateOrder = (newOrder: Order) => {
@@ -187,7 +237,7 @@ export default function App({ businessName, userEmail }: AppProps) {
 
     // Add fitting reminder
     const newRem: ReminderItem = {
-      id: `rem-${Date.now()}`,
+      id: crypto.randomUUID(),
       title: `${newOrder.customerName} - ${newOrder.itemType} Fitting`,
       description: `First fitting session for order ${newOrder.orderNumber}`,
       dueDate: newOrder.dueDate,
@@ -198,6 +248,8 @@ export default function App({ businessName, userEmail }: AppProps) {
       orderId: newOrder.id,
     };
     setReminders((prev) => [newRem, ...prev]);
+    void persistWorkspaceChange('save_order', newOrder);
+    void persistWorkspaceChange('save_reminder', newRem);
 
     // Automatically navigate to the newly created order details
     handleSelectOrder(newOrder);
@@ -218,6 +270,7 @@ export default function App({ businessName, userEmail }: AppProps) {
         return o;
       })
     );
+    void persistWorkspaceChange('add_payment', { orderId, payment: log });
   };
 
   const handleAddCost = (orderId: string, cost: OrderCost) => {
@@ -232,6 +285,7 @@ export default function App({ businessName, userEmail }: AppProps) {
         return o;
       })
     );
+    void persistWorkspaceChange('add_cost', { orderId, cost });
 
     // If partner is assigned, update partner's balance owed
     if (cost.partnerId && cost.status === 'Unpaid') {
@@ -263,6 +317,7 @@ export default function App({ businessName, userEmail }: AppProps) {
     });
     setCustomerToEdit(null);
     setIsNewCustomerOpen(false);
+    void persistWorkspaceChange('save_customer', customer);
 
     // If customer was created from the "Create New Order" workflow, proceed directly to order & measurements
     if (createdFromOrderFlow) {
@@ -274,12 +329,14 @@ export default function App({ businessName, userEmail }: AppProps) {
 
   const handleDeleteCustomer = (customerId: string) => {
     setCustomers((prev) => prev.filter((c) => c.id !== customerId));
+    void persistWorkspaceChange('delete_customer', { id: customerId });
   };
 
   const handleSettleInvoice = (invoiceId: string) => {
     setInvoices((prev) =>
       prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: 'Paid' } : inv))
     );
+    void persistWorkspaceChange('settle_invoice', { id: invoiceId });
   };
 
   const handleSettlePartnerBalance = (partnerId: string, amount: number) => {
@@ -294,20 +351,25 @@ export default function App({ businessName, userEmail }: AppProps) {
           : p
       )
     );
+    void persistWorkspaceChange('settle_partner_balance', { id: partnerId, amount });
   };
 
   const handleAddReminder = (item: ReminderItem) => {
     setReminders((prev) => [item, ...prev]);
+    void persistWorkspaceChange('save_reminder', item);
   };
 
   const handleToggleReminder = (reminderId: string) => {
-    setReminders((prev) =>
-      prev.map((r) => (r.id === reminderId ? { ...r, completed: !r.completed } : r))
-    );
+    const reminder = reminders.find((item) => item.id === reminderId);
+    if (!reminder) return;
+    const completed = !reminder.completed;
+    setReminders((prev) => prev.map((r) => (r.id === reminderId ? { ...r, completed } : r)));
+    void persistWorkspaceChange('toggle_reminder', { id: reminderId, completed });
   };
 
   const handleDeleteReminder = (reminderId: string) => {
     setReminders((prev) => prev.filter((r) => r.id !== reminderId));
+    void persistWorkspaceChange('delete_reminder', { id: reminderId });
   };
 
   const handleOpenMessageSender = (name: string, phone: string, text: string) => {
@@ -324,6 +386,14 @@ export default function App({ businessName, userEmail }: AppProps) {
   const activeOrdersCount = orders.filter(
     (o) => o.status !== 'Completed' && o.status !== 'Ready'
   ).length;
+
+  if (!workspaceLoaded) {
+    return (
+      <main className="min-h-screen grid place-items-center bg-[#fff8f4] dark:bg-[#150f0b] text-[#524438] dark:text-[#d7c3b2]">
+        Loading your business workspace…
+      </main>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fff8f4] dark:bg-[#150f0b] text-[#211a15] dark:text-[#f7ebe1] flex flex-col font-sans selection:bg-[#a6681c] selection:text-white">
@@ -445,7 +515,10 @@ export default function App({ businessName, userEmail }: AppProps) {
             partners={partners}
             invoices={invoices}
             shopProfile={shopProfile}
-            onAddPartner={(p) => setPartners((prev) => [p, ...prev])}
+            onAddPartner={(partner) => {
+              setPartners((prev) => [partner, ...prev]);
+              void persistWorkspaceChange('save_partner', partner);
+            }}
             onSettleInvoice={handleSettleInvoice}
             onSettlePartnerBalance={handleSettlePartnerBalance}
           />
@@ -466,17 +539,24 @@ export default function App({ businessName, userEmail }: AppProps) {
           <InventoryView
             inventory={inventory}
             shopProfile={shopProfile}
-            onAddInventory={(item) => setInventory((prev) => [item, ...prev])}
-            onUpdateInventory={(item) =>
-              setInventory((prev) => prev.map((i) => (i.id === item.id ? item : i)))
-            }
+            onAddInventory={(item) => {
+              setInventory((prev) => [item, ...prev]);
+              void persistWorkspaceChange('save_inventory', item);
+            }}
+            onUpdateInventory={(item) => {
+              setInventory((prev) => prev.map((i) => (i.id === item.id ? item : i)));
+              void persistWorkspaceChange('save_inventory', item);
+            }}
           />
         )}
 
         {currentView === 'settings' && (
           <SettingsView
             shopProfile={shopProfile}
-            onUpdateProfile={(updated) => setShopProfile(updated)}
+            onUpdateProfile={(updated) => {
+              setShopProfile(updated);
+              void persistWorkspaceChange('save_profile', updated);
+            }}
             onSignOut={() => {
               window.location.href = '/logout';
             }}

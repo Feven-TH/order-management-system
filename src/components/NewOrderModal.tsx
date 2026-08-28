@@ -138,7 +138,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
     const parsedDeposit = parseFloat(deposit) || 0;
 
     const newOrder: Order = {
-      id: `ord-${Date.now()}`,
+      id: crypto.randomUUID(),
       orderNumber: orderNum,
       customerId: selectedCustomer.id,
       customerName: selectedCustomer.name,
@@ -158,7 +158,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
         parsedDeposit > 0
           ? [
               {
-                id: `pay-${Date.now()}`,
+                id: crypto.randomUUID(),
                 amount: parsedDeposit,
                 method: paymentMethod,
                 date: new Date().toISOString().split('T')[0],

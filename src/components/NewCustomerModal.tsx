@@ -54,7 +54,7 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
       .toUpperCase();
 
     const customer: Customer = {
-      id: customerToEdit ? customerToEdit.id : `cust-${Date.now()}`,
+      id: customerToEdit ? customerToEdit.id : crypto.randomUUID(),
       name,
       phone,
       altPhone,

@@ -49,6 +49,41 @@ export async function inviteAdmin(formData: FormData) {
   adminsRedirect({ message: `Invitation sent to ${email}` });
 }
 
+/** Creates a tenant owner without granting any platform-admin privileges. */
+export async function inviteTenantOwner(formData: FormData) {
+  await requireSuperadmin();
+
+  const businessName = String(formData.get('business_name') || '').trim();
+  const email = String(formData.get('email') || '').trim().toLowerCase();
+  const fullName = String(formData.get('full_name') || '').trim();
+
+  if (!businessName || !email) {
+    adminsRedirect({ error: 'Business name and email are required' });
+  }
+
+  if (businessName.length > 120) {
+    adminsRedirect({ error: 'Business name must be 120 characters or less' });
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+    data: {
+      business_name: businessName,
+      full_name: fullName || null,
+    },
+    redirectTo: `${getAppUrl()}/auth/callback`,
+  });
+
+  if (error || !data.user) {
+    adminsRedirect({ error: error?.message || 'Could not create tenant owner' });
+  }
+
+  // The auth.users insert trigger creates the business, owner membership, and
+  // default theme. Deliberately do not insert admin_profiles here.
+  revalidatePath('/admins');
+  adminsRedirect({ message: `Tenant invitation sent to ${email}` });
+}
+
 export async function removeAdmin(formData: FormData) {
   const currentAdmin = await requireSuperadmin();
   const adminId = String(formData.get('admin_id') || '');

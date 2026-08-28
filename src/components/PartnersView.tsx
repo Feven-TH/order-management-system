@@ -47,7 +47,7 @@ export const PartnersView: React.FC<PartnersViewProps> = ({
     if (!newPartnerName) return;
 
     const partner: Partner = {
-      id: `part-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: newPartnerName,
       type: newPartnerType,
       phone: newPartnerPhone,

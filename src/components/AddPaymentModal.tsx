@@ -32,7 +32,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
     if (parsedAmount <= 0) return;
 
     const newLog: PaymentLog = {
-      id: `pay-${Date.now()}`,
+      id: crypto.randomUUID(),
       amount: parsedAmount,
       method: method,
       date: date,

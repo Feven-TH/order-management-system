@@ -50,7 +50,7 @@ export const RemindersView: React.FC<RemindersViewProps> = ({
     if (!title) return;
 
     const newRem: ReminderItem = {
-      id: `rem-${Date.now()}`,
+      id: crypto.randomUUID(),
       title,
       description: desc,
       dueDate,

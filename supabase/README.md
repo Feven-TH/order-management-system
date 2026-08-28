@@ -24,6 +24,7 @@ Supabase CLI:
 
 1. `supabase/migrations/202608230001_admin_auth.sql`
 2. `supabase/migrations/202608280001_multi_tenancy.sql`
+3. `supabase/migrations/202608280002_partner_payments.sql`
 
 Then create the first shop at `/signup`. RLS and composite foreign keys prevent
 one business from reading or linking to another business's data.
