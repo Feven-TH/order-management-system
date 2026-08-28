@@ -31,5 +31,15 @@ export function getSupabaseServiceRoleKey() {
 }
 
 export function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const value = process.env.APP_URL;
+
+  if (!value) {
+    throw new Error('Missing APP_URL');
+  }
+
+  try {
+    return new URL(value).toString().replace(/\/$/, '');
+  } catch {
+    throw new Error('APP_URL must be an absolute URL, for example https://app.example.com');
+  }
 }

@@ -19,12 +19,6 @@ import {
   ShopProfile,
 } from './types';
 import {
-  INITIAL_CUSTOMERS,
-  INITIAL_INVENTORY,
-  INITIAL_INVOICES,
-  INITIAL_ORDERS,
-  INITIAL_PARTNERS,
-  INITIAL_REMINDERS,
   INITIAL_SHOP_PROFILE,
 } from './data/initialData';
 import { Navigation } from './components/Navigation';
@@ -50,53 +44,26 @@ import {
 } from './utils/themeGenerator';
 
 type AppProps = {
-  adminEmail: string;
-  adminRole: 'superadmin' | 'admin';
+  businessName: string;
+  userEmail: string;
 };
 
-const STORAGE_KEYS = {
-  profile: 'atelieros_admin_profile',
-  orders: 'atelieros_admin_orders',
-  customers: 'atelieros_admin_customers',
-  partners: 'atelieros_admin_partners',
-  invoices: 'atelieros_admin_invoices',
-  reminders: 'atelieros_admin_reminders',
-  inventory: 'atelieros_admin_inventory',
-};
-
-function readStoredJson<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') {
-    return fallback;
-  }
-
-  const saved = window.localStorage.getItem(key);
-
-  if (!saved) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(saved) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-export default function App({ adminEmail, adminRole }: AppProps) {
+export default function App({ businessName, userEmail }: AppProps) {
   // Navigation & View State
   const [currentView, setCurrentView] = useState<ActiveView>('dashboard');
   const [previousView, setPreviousView] = useState<ActiveView>('dashboard');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [ordersFilter, setOrdersFilter] = useState<string>('All Orders');
 
-  // Workspace Data State with LocalStorage Caching
+  // Workspace state is intentionally not kept in browser localStorage. Browser
+  // storage is shared by accounts on the same device and is not a tenant-safe
+  // persistence layer. Persisted records belong in the RLS-protected database.
   const [shopProfile, setShopProfile] = useState<ShopProfile>(() => {
-    const parsed = readStoredJson<Partial<ShopProfile>>(STORAGE_KEYS.profile, {});
     return {
       ...INITIAL_SHOP_PROFILE,
-      ...parsed,
-      email: adminEmail || parsed.email || INITIAL_SHOP_PROFILE.email,
-      theme: parsed.theme || 'dark',
+      name: businessName,
+      email: userEmail || INITIAL_SHOP_PROFILE.email,
+      theme: 'dark',
     };
   });
 
@@ -117,29 +84,17 @@ export default function App({ adminEmail, adminRole }: AppProps) {
     applyThemeToDocument(themeToApply, nextTheme === 'dark');
   };
 
-  const [orders, setOrders] = useState<Order[]>(() => {
-    return readStoredJson<Order[]>(STORAGE_KEYS.orders, INITIAL_ORDERS);
-  });
+  const [orders, setOrders] = useState<Order[]>([]);
 
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    return readStoredJson<Customer[]>(STORAGE_KEYS.customers, INITIAL_CUSTOMERS);
-  });
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const [partners, setPartners] = useState<Partner[]>(() => {
-    return readStoredJson<Partner[]>(STORAGE_KEYS.partners, INITIAL_PARTNERS);
-  });
+  const [partners, setPartners] = useState<Partner[]>([]);
 
-  const [invoices, setInvoices] = useState<PartnerInvoice[]>(() => {
-    return readStoredJson<PartnerInvoice[]>(STORAGE_KEYS.invoices, INITIAL_INVOICES);
-  });
+  const [invoices, setInvoices] = useState<PartnerInvoice[]>([]);
 
-  const [reminders, setReminders] = useState<ReminderItem[]>(() => {
-    return readStoredJson<ReminderItem[]>(STORAGE_KEYS.reminders, INITIAL_REMINDERS);
-  });
+  const [reminders, setReminders] = useState<ReminderItem[]>([]);
 
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
-    return readStoredJson<InventoryItem[]>(STORAGE_KEYS.inventory, INITIAL_INVENTORY);
-  });
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
 
   // Modals & Dialogs State
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
@@ -175,35 +130,6 @@ export default function App({ adminEmail, adminRole }: AppProps) {
     }
     applyThemeToDocument(themeToApply, shopProfile.theme === 'dark');
   }, [shopProfile.businessTheme, shopProfile.theme, shopProfile.logoUrl, shopProfile.brandAccent]);
-
-  // LocalStorage sync effects
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(shopProfile));
-  }, [shopProfile]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(customers));
-  }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.partners, JSON.stringify(partners));
-  }, [partners]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.invoices, JSON.stringify(invoices));
-  }, [invoices]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.reminders, JSON.stringify(reminders));
-  }, [reminders]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.inventory, JSON.stringify(inventory));
-  }, [inventory]);
 
   // Keep selectedOrder in sync with orders list
   useEffect(() => {
@@ -412,10 +338,6 @@ export default function App({ adminEmail, adminRole }: AppProps) {
         shopProfile={shopProfile}
         unreadRemindersCount={unreadRemindersCount}
         activeOrdersCount={activeOrdersCount}
-        canManageAdmins={adminRole === 'superadmin'}
-        onOpenAdmins={() => {
-          window.location.href = '/admins';
-        }}
         onSignOut={() => {
           window.location.href = '/logout';
         }}

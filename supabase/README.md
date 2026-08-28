@@ -1,6 +1,8 @@
 # Supabase Setup
 
-This app uses Supabase Auth for admin login and `public.admin_profiles` for role checks.
+This app uses Supabase Auth with a business as the tenant root. Every Auth user
+receives one owned business, a membership, and a default theme through a database
+trigger at signup.
 
 ## Environment
 
@@ -10,15 +12,18 @@ Copy `.env.example` to `.env.local` and set:
 NEXT_PUBLIC_SUPABASE_URL="https://your-project-ref.supabase.co"
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sb_publishable_your_key"
 SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+APP_URL="http://localhost:3000"
 ```
 
 Only `NEXT_PUBLIC_*` values are available in the browser. Keep `SUPABASE_SERVICE_ROLE_KEY` server-only.
 
-## First Superadmin
+## Apply migrations
 
-1. Create the first user in Supabase Auth.
-2. Run `supabase/migrations/202608230001_admin_auth.sql` in the Supabase SQL editor, or apply it through Supabase CLI.
-3. Insert the first superadmin row using the bootstrap SQL at the bottom of the migration.
+Run these in filename order in the Supabase SQL editor, or apply them with the
+Supabase CLI:
 
-After that, the superadmin can sign in at `/login` and manage admins at `/admins`.
+1. `supabase/migrations/202608230001_admin_auth.sql`
+2. `supabase/migrations/202608280001_multi_tenancy.sql`
+
+Then create the first shop at `/signup`. RLS and composite foreign keys prevent
+one business from reading or linking to another business's data.

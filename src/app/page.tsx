@@ -1,10 +1,15 @@
 import App from '../App';
-import { requireAdmin } from '@/lib/auth/guards';
+import { requireTenant } from '@/lib/auth/tenant';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const admin = await requireAdmin();
+  const tenant = await requireTenant();
 
-  return <App adminEmail={admin.email} adminRole={admin.role} />;
+  return (
+    <App
+      businessName={tenant.businessName}
+      userEmail={tenant.email}
+    />
+  );
 }

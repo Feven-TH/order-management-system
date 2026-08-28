@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { Lock, Mail, Scissors } from 'lucide-react';
-import { getCurrentAdmin } from '@/lib/auth/guards';
+import { getCurrentTenant } from '@/lib/auth/tenant';
 import { signIn } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -8,14 +9,15 @@ export const dynamic = 'force-dynamic';
 interface LoginPageProps {
   searchParams: Promise<{
     error?: string;
+    message?: string;
   }>;
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const admin = await getCurrentAdmin();
+  const tenant = await getCurrentTenant();
   const params = await searchParams;
 
-  if (admin) {
+  if (tenant) {
     redirect('/');
   }
 
@@ -27,16 +29,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <Scissors className="w-6 h-6" />
           </div>
           <h1 className="font-headline text-2xl font-bold tracking-tight">
-            Admin sign in
+            Sign in to your business
           </h1>
           <p className="mt-2 text-sm text-[#524438] dark:text-[#d7c3b2]">
-            Access is limited to active AtelierOS admins.
+            Your workspace is isolated to your business.
           </p>
         </div>
 
         {params.error && (
           <div className="mb-5 rounded-md border border-[#ba1a1a]/30 bg-[#ba1a1a]/10 px-3 py-2 text-sm text-[#ba1a1a] dark:text-[#ffb4ab]">
             {params.error}
+          </div>
+        )}
+
+        {params.message && (
+          <div className="mb-5 rounded-md border border-green-700/20 bg-green-700/10 px-3 py-2 text-sm text-green-800 dark:text-green-200">
+            {params.message}
           </div>
         )}
 
@@ -80,6 +88,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Sign in
           </button>
         </form>
+
+        <p className="mt-5 text-center text-sm text-[#524438] dark:text-[#d7c3b2]">
+          New to AtelierOS?{' '}
+          <Link href="/signup" className="font-semibold text-[#885000] dark:text-[#ffb86d] hover:underline">
+            Create your business
+          </Link>
+        </p>
       </section>
     </main>
   );
