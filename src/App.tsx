@@ -12,6 +12,7 @@ import {
   InventoryItem,
   Order,
   OrderCost,
+  OrderMaterial,
   Partner,
   PartnerInvoice,
   PaymentLog,
@@ -100,8 +101,8 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
   const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
   const workspaceMutationQueue = useRef<Promise<void>>(Promise.resolve());
 
-  const persistWorkspaceChange = (action: string, payload: unknown): Promise<boolean> => {
-    const request = async (): Promise<boolean> => {
+  const persistWorkspaceChange = <T = { ok: true }>(action: string, payload: unknown): Promise<T | null> => {
+    const request = async (): Promise<T | null> => {
       try {
         const response = await fetch('/api/workspace', {
           method: 'POST',
@@ -111,14 +112,16 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
 
         // Supabase mutations may correctly return no rows. The route's HTTP
         // status is the acknowledgement here, not a response data payload.
-        if (response.ok) return true;
+        if (response.ok) {
+          return (await response.json().catch(() => ({ ok: true }))) as T;
+        }
 
         const body = await response.json().catch(() => null);
         throw new Error(body?.error || `The database did not accept this change (HTTP ${response.status})`);
       } catch (error) {
         console.error('Workspace save failed', { action, error });
         setWorkspaceNotice('Could not sync this change. Please try again.');
-        return false;
+        return null;
       }
     };
 
@@ -233,7 +236,27 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
       setSelectedOrder(null);
       setCurrentView(previousView || 'dashboard');
     }
-    void persistWorkspaceChange('delete_order', { id: orderId });
+    void (async () => {
+      const result = await persistWorkspaceChange<{
+        ok: true;
+        restoredMaterials: { materialId: string; quantityUsed: number }[];
+      }>('delete_order', { id: orderId });
+
+      if (!result?.restoredMaterials) return;
+      const restoredByMaterial = result.restoredMaterials.reduce<Record<string, number>>(
+        (totals, material) => ({
+          ...totals,
+          [material.materialId]: (totals[material.materialId] || 0) + Number(material.quantityUsed),
+        }),
+        {}
+      );
+      setInventory((prev) =>
+        prev.map((item) => {
+          const restored = restoredByMaterial[item.id];
+          return restored ? { ...item, stock: item.stock + restored } : item;
+        })
+      );
+    })();
   };
 
   const handleCreateOrder = (newOrder: Order) => {
@@ -320,6 +343,62 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
         )
       );
     }
+  };
+
+  const handleAddOrderMaterial = async (orderId: string, materialId: string, quantityUsed: number) => {
+    const inventoryItem = inventory.find((item) => item.id === materialId);
+    if (!inventoryItem || quantityUsed <= 0 || quantityUsed > inventoryItem.stock) {
+      setWorkspaceNotice('Choose an in-stock material and a quantity within the available inventory.');
+      return false;
+    }
+
+    const result = await persistWorkspaceChange<{
+      ok: true;
+      material: OrderMaterial & { availableStock: number };
+    }>('add_order_material', { orderId, materialId, quantityUsed });
+
+    if (!result?.material) return false;
+    const material = {
+      ...result.material,
+      quantityUsed: Number(result.material.quantityUsed),
+      unitCost: Number(result.material.unitCost),
+      totalCost: Number(result.material.totalCost),
+    };
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === orderId ? { ...order, materials: [...order.materials, material] } : order
+      )
+    );
+    setInventory((prev) =>
+      prev.map((item) =>
+        item.id === material.materialId ? { ...item, stock: Number(result.material.availableStock) } : item
+      )
+    );
+    return true;
+  };
+
+  const handleRemoveOrderMaterial = async (orderId: string, orderMaterialId: string) => {
+    const result = await persistWorkspaceChange<{
+      ok: true;
+      restoredMaterial: { materialId: string; availableStock: number };
+    }>('remove_order_material', { orderMaterialId });
+
+    if (!result?.restoredMaterial) return false;
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === orderId
+          ? { ...order, materials: order.materials.filter((material) => material.id !== orderMaterialId) }
+          : order
+      )
+    );
+    setInventory((prev) =>
+      prev.map((item) =>
+        item.id === result.restoredMaterial.materialId
+          ? { ...item, stock: Number(result.restoredMaterial.availableStock) }
+          : item
+      )
+    );
+    return true;
   };
 
   const updateCustomerBalance = (customerId: string) => {
@@ -494,6 +573,9 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
             onOpenAddCost={() => setIsAddCostOpen(true)}
             onOpenPhotoPreview={(url) => setPreviewPhotoUrl(url)}
             onOpenMessageSender={handleOpenMessageSender}
+            inventory={inventory}
+            onAddMaterial={handleAddOrderMaterial}
+            onRemoveMaterial={handleRemoveOrderMaterial}
           />
         )}
 
@@ -565,6 +647,7 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
         {currentView === 'inventory' && (
           <InventoryView
             inventory={inventory}
+            orders={orders}
             shopProfile={shopProfile}
             onAddInventory={(item) => {
               setInventory((prev) => [item, ...prev]);

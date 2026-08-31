@@ -154,6 +154,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
       measurements: measurements,
       referencePhotos: uploadedPhotos,
       costs: [],
+      materials: [],
       paymentLogs:
         parsedDeposit > 0
           ? [

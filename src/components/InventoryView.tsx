@@ -9,10 +9,11 @@ import {
   Edit2,
   CheckCircle2,
 } from 'lucide-react';
-import { InventoryItem, ShopProfile } from '../types';
+import { InventoryItem, Order, ShopProfile } from '../types';
 
 interface InventoryViewProps {
   inventory: InventoryItem[];
+  orders: Order[];
   shopProfile: ShopProfile;
   onAddInventory: (item: InventoryItem) => void;
   onUpdateInventory: (item: InventoryItem) => void;
@@ -20,6 +21,7 @@ interface InventoryViewProps {
 
 export const InventoryView: React.FC<InventoryViewProps> = ({
   inventory,
+  orders,
   shopProfile,
   onAddInventory,
   onUpdateInventory,
@@ -39,6 +41,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   );
 
   const lowStockItems = inventory.filter((item) => item.stock <= item.minStockLevel);
+  const consumptionLog = orders
+    .flatMap((order) =>
+      order.materials.map((material) => ({
+        ...material,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerName: order.customerName,
+      }))
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,6 +224,49 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           );
         })}
       </div>
+
+      {/* Order Consumption Log */}
+      <section className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/25 dark:border-[#524438] rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#d7c3b2]/20 dark:border-[#524438] flex items-center gap-2">
+          <Scissors className="w-4 h-4 text-[#885000]" />
+          <div>
+            <h2 className="font-headline font-bold text-base text-[#211a15] dark:text-white">Order Consumption Log</h2>
+            <p className="text-[11px] text-[#847466]">Materials deducted from inventory for active orders.</p>
+          </div>
+        </div>
+
+        {consumptionLog.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[620px] text-left text-xs">
+              <thead className="bg-[#fff8f4] dark:bg-[#1a120c] text-[#847466] uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Material</th>
+                  <th className="px-4 py-3 font-semibold">Order</th>
+                  <th className="px-4 py-3 font-semibold text-right">Quantity</th>
+                  <th className="px-5 py-3 font-semibold text-right">Cost</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#d7c3b2]/15">
+                {consumptionLog.map((entry) => (
+                  <tr key={entry.id} className="text-[#524438] dark:text-[#d7c3b2]">
+                    <td className="px-5 py-3 font-semibold text-[#211a15] dark:text-white">{entry.materialName}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-[#211a15] dark:text-white">{entry.orderNumber}</span>
+                      <span className="block text-[11px] text-[#847466]">{entry.customerName}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right">{entry.quantityUsed.toLocaleString()} {entry.unit}</td>
+                    <td className="px-5 py-3 text-right font-mono font-semibold text-[#211a15] dark:text-white">
+                      {entry.totalCost.toLocaleString()} {shopProfile.currency}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="px-5 py-7 text-center text-xs text-[#847466]">No materials have been assigned to orders yet.</p>
+        )}
+      </section>
 
       {/* Add Item Modal */}
       {showAddModal && (

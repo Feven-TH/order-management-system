@@ -11,6 +11,8 @@ type WorkspaceAction =
   | 'delete_order'
   | 'add_payment'
   | 'add_cost'
+  | 'add_order_material'
+  | 'remove_order_material'
   | 'save_partner'
   | 'save_reminder'
   | 'toggle_reminder'
@@ -73,16 +75,17 @@ export async function GET() {
 
     const orders = ordersResult.data || [];
     const orderIds = orders.map((order) => order.id);
-    const [measurementsResult, paymentsResult, photosResult] = orderIds.length
+    const [measurementsResult, paymentsResult, photosResult, orderMaterialsResult] = orderIds.length
       ? await Promise.all([
           supabase.from('order_measurements').select('*').in('order_id', orderIds),
           supabase.from('order_payments').select('*').in('order_id', orderIds).order('paid_at'),
           supabase.from('order_reference_photos').select('*').in('order_id', orderIds),
+          supabase.from('order_materials').select('*').in('order_id', orderIds).order('created_at'),
         ])
-      : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
+      : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
 
-    if (measurementsResult.error || paymentsResult.error || photosResult.error) {
-      throw measurementsResult.error || paymentsResult.error || photosResult.error;
+    if (measurementsResult.error || paymentsResult.error || photosResult.error || orderMaterialsResult.error) {
+      throw measurementsResult.error || paymentsResult.error || photosResult.error || orderMaterialsResult.error;
     }
 
     const customers = customersResult.data || [];
@@ -95,6 +98,8 @@ export async function GET() {
     const paymentsByOrderId = new Map<string, any[]>();
     const photosByOrderId = new Map<string, string[]>();
     const costsByOrderId = new Map<string, any[]>();
+    const materialsByOrderId = new Map<string, any[]>();
+    const inventoryById = new Map((inventoryResult.data || []).map((item) => [item.id, item]));
 
     for (const payment of paymentsResult.data || []) {
       paymentsByOrderId.set(payment.order_id, [...(paymentsByOrderId.get(payment.order_id) || []), payment]);
@@ -104,6 +109,9 @@ export async function GET() {
     }
     for (const cost of costs) {
       costsByOrderId.set(cost.order_id, [...(costsByOrderId.get(cost.order_id) || []), cost]);
+    }
+    for (const material of orderMaterialsResult.data || []) {
+      materialsByOrderId.set(material.order_id, [...(materialsByOrderId.get(material.order_id) || []), material]);
     }
 
     const apiOrders = orders.map((order) => {
@@ -125,6 +133,19 @@ export async function GET() {
         notes: order.notes || undefined,
         measurements: measurementByOrderId.get(order.id)?.measurements || {},
         referencePhotos: photosByOrderId.get(order.id) || [],
+        materials: (materialsByOrderId.get(order.id) || []).map((material) => {
+          const inventoryItem = inventoryById.get(material.material_id);
+          return {
+            id: material.id,
+            materialId: material.material_id,
+            materialName: inventoryItem?.name || 'Unknown material',
+            unit: inventoryItem?.unit || 'unit',
+            quantityUsed: numberValue(material.quantity_used),
+            unitCost: numberValue(material.unit_cost),
+            totalCost: numberValue(material.total_cost),
+            createdAt: String(material.created_at),
+          };
+        }),
         costs: (costsByOrderId.get(order.id) || []).map((cost) => ({
           id: cost.id,
           item: cost.item,
@@ -325,9 +346,21 @@ export async function POST(request: Request) {
         break;
       }
       case 'delete_order': {
+        const { data: consumedMaterials, error: materialsError } = await supabase
+          .from('order_materials')
+          .select('material_id, quantity_used')
+          .eq('order_id', payload.id)
+          .eq('business_id', tenant.businessId);
+        if (materialsError) throw materialsError;
         const { error } = await supabase.from('orders').delete().eq('id', payload.id).eq('business_id', tenant.businessId);
         if (error) throw error;
-        break;
+        return NextResponse.json({
+          ok: true,
+          restoredMaterials: (consumedMaterials || []).map((material) => ({
+            materialId: material.material_id,
+            quantityUsed: numberValue(material.quantity_used),
+          })),
+        });
       }
       case 'add_payment': {
         const { orderId, payment } = payload;
@@ -362,6 +395,23 @@ export async function POST(request: Request) {
         });
         if (error) throw error;
         break;
+      }
+      case 'add_order_material': {
+        const { orderId, materialId, quantityUsed } = payload;
+        const { data, error } = await supabase.rpc('consume_order_material', {
+          p_order_id: orderId,
+          p_material_id: materialId,
+          p_quantity_used: numberValue(quantityUsed),
+        });
+        if (error) throw error;
+        return NextResponse.json({ ok: true, material: data });
+      }
+      case 'remove_order_material': {
+        const { data, error } = await supabase.rpc('release_order_material', {
+          p_order_material_id: payload.orderMaterialId,
+        });
+        if (error) throw error;
+        return NextResponse.json({ ok: true, restoredMaterial: data });
       }
       case 'save_partner': {
         const partner = payload;

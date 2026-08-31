@@ -38,6 +38,17 @@ export interface OrderCost {
   notes?: string;
 }
 
+export interface OrderMaterial {
+  id: string;
+  materialId: string;
+  materialName: string;
+  unit: string;
+  quantityUsed: number;
+  unitCost: number;
+  totalCost: number;
+  createdAt: string;
+}
+
 export interface PaymentLog {
   id: string;
   amount: number;
@@ -64,6 +75,7 @@ export interface Order {
   measurements: OrderMeasurement;
   referencePhotos: string[];
   costs: OrderCost[];
+  materials: OrderMaterial[];
   paymentLogs: PaymentLog[];
 }
 

@@ -17,8 +17,9 @@ import {
   Edit2,
   MessageCircle,
   TrendingUp,
+  Package,
 } from 'lucide-react';
-import { Order, OrderStatus, ShopProfile } from '../types';
+import { InventoryItem, Order, OrderStatus, ShopProfile } from '../types';
 
 interface OrderDetailsViewProps {
   order: Order;
@@ -30,6 +31,9 @@ interface OrderDetailsViewProps {
   onOpenAddCost: () => void;
   onOpenPhotoPreview: (photoUrl: string) => void;
   onOpenMessageSender: (recipientName: string, recipientPhone: string, message: string) => void;
+  inventory: InventoryItem[];
+  onAddMaterial: (orderId: string, materialId: string, quantityUsed: number) => Promise<boolean>;
+  onRemoveMaterial: (orderId: string, orderMaterialId: string) => Promise<boolean>;
 }
 
 export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
@@ -42,10 +46,16 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   onOpenAddCost,
   onOpenPhotoPreview,
   onOpenMessageSender,
+  inventory,
+  onAddMaterial,
+  onRemoveMaterial,
 }) => {
   const [isEditingMeasurements, setIsEditingMeasurements] = useState(false);
   const [measurementDraft, setMeasurementDraft] = useState(order.measurements || {});
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [selectedMaterialId, setSelectedMaterialId] = useState('');
+  const [quantityUsed, setQuantityUsed] = useState('');
+  const [materialError, setMaterialError] = useState<string | null>(null);
 
   const statuses: OrderStatus[] = [
     'Confirmed',
@@ -57,10 +67,19 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
     'Completed',
   ];
 
-  const totalCosts = order.costs.reduce((acc, c) => acc + (c.amount || 0), 0);
+  const inventoryMaterialCosts = order.materials.reduce((acc, material) => acc + material.totalCost, 0);
+  const additionalMaterialCosts = order.costs
+    .filter((cost) => cost.costType === 'Material')
+    .reduce((acc, cost) => acc + (cost.amount || 0), 0);
+  const materialCosts = inventoryMaterialCosts + additionalMaterialCosts;
+  const laborCosts = order.costs
+    .filter((cost) => cost.costType !== 'Material')
+    .reduce((acc, cost) => acc + (cost.amount || 0), 0);
+  const totalCosts = materialCosts + laborCosts;
   const remainingPayment = Math.max(0, order.price - order.paid);
   const orderProfit = order.price - totalCosts;
   const profitMargin = order.price > 0 ? Math.round((orderProfit / order.price) * 100) : 0;
+  const selectedMaterial = inventory.find((item) => item.id === selectedMaterialId);
 
   const handleStatusChange = (newStatus: OrderStatus) => {
     onUpdateOrder({
@@ -99,6 +118,28 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const handleSendReminder = () => {
     const text = `Hello ${order.customerName}, this is ${shopProfile.name}. We are currently working on your ${order.itemType}. Due date is ${order.dueDate}. Current balance: ${remainingPayment.toLocaleString()} ${shopProfile.currency}.`;
     onOpenMessageSender(order.customerName, order.customerPhone, text);
+  };
+
+  const handleAddMaterial = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const requestedQuantity = Number(quantityUsed);
+    if (!selectedMaterial || !Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
+      setMaterialError('Choose a material and enter a quantity greater than zero.');
+      return;
+    }
+    if (requestedQuantity > selectedMaterial.stock) {
+      setMaterialError(`Only ${selectedMaterial.stock} ${selectedMaterial.unit} is available.`);
+      return;
+    }
+
+    setMaterialError(null);
+    const saved = await onAddMaterial(order.id, selectedMaterial.id, requestedQuantity);
+    if (saved) {
+      setSelectedMaterialId('');
+      setQuantityUsed('');
+    } else {
+      setMaterialError('This material could not be added. Please try again.');
+    }
   };
 
   return (
@@ -231,6 +272,100 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               </p>
             </div>
           </div>
+
+          {/* Materials Used */}
+          <section className="bg-white dark:bg-[#241a13] p-6 rounded-xl border border-[#d7c3b2]/20 dark:border-[#524438] shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-[#885000]" />
+              <div>
+                <h3 className="font-headline font-bold text-base text-[#211a15] dark:text-white">Materials Used</h3>
+                <p className="text-[11px] text-[#847466]">Inventory is deducted when a material is added to this order.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddMaterial} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_7rem_auto] gap-2 items-end">
+              <label className="block">
+                <span className="block text-[10px] uppercase font-bold tracking-wider text-[#847466] mb-1">Material</span>
+                <select
+                  value={selectedMaterialId}
+                  onChange={(event) => {
+                    setSelectedMaterialId(event.target.value);
+                    setMaterialError(null);
+                  }}
+                  className="w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-lg text-xs text-[#211a15] dark:text-white outline-none focus:border-[#885000]"
+                >
+                  <option value="">Select inventory material</option>
+                  {inventory.map((item) => (
+                    <option key={item.id} value={item.id} disabled={item.stock <= 0}>
+                      {item.name} — {item.stock} {item.unit} available
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="block text-[10px] uppercase font-bold tracking-wider text-[#847466] mb-1">Quantity</span>
+                <input
+                  type="number"
+                  min="0.001"
+                  step="0.001"
+                  max={selectedMaterial?.stock}
+                  value={quantityUsed}
+                  onChange={(event) => {
+                    setQuantityUsed(event.target.value);
+                    setMaterialError(null);
+                  }}
+                  placeholder="0"
+                  className="w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-lg text-xs text-[#211a15] dark:text-white outline-none focus:border-[#885000]"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={!selectedMaterialId}
+                className="px-3 py-2 rounded-lg bg-[#885000] hover:bg-[#a6681c] disabled:cursor-not-allowed disabled:opacity-50 text-white text-xs font-bold transition-colors"
+              >
+                Add material
+              </button>
+            </form>
+
+            {selectedMaterial && quantityUsed && Number(quantityUsed) > 0 && (
+              <p className="text-[11px] text-[#524438] dark:text-[#d7c3b2]">
+                {Number(quantityUsed).toLocaleString()} {selectedMaterial.unit} × {selectedMaterial.costPerUnit.toLocaleString()} {shopProfile.currency}
+                <span className="font-bold text-[#211a15] dark:text-white"> = {(Number(quantityUsed) * selectedMaterial.costPerUnit).toLocaleString()} {shopProfile.currency}</span>
+              </p>
+            )}
+            {materialError && <p className="text-xs font-medium text-[#ba1a1a]">{materialError}</p>}
+
+            {order.materials.length > 0 ? (
+              <div className="divide-y divide-[#d7c3b2]/20 border-t border-[#d7c3b2]/20">
+                {order.materials.map((material) => (
+                  <div key={material.id} className="flex items-center justify-between gap-3 py-2.5 text-xs">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[#211a15] dark:text-white truncate">{material.materialName}</p>
+                      <p className="text-[#847466]">
+                        {material.quantityUsed.toLocaleString()} {material.unit} × {material.unitCost.toLocaleString()} {shopProfile.currency}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-mono font-bold text-[#211a15] dark:text-white">
+                        {material.totalCost.toLocaleString()} {shopProfile.currency}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void onRemoveMaterial(order.id, material.id)}
+                        className="p-1 text-[#847466] hover:text-[#ba1a1a] transition-colors"
+                        aria-label={`Remove ${material.materialName}`}
+                        title="Remove and restore inventory"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[#847466] py-1">No inventory has been consumed for this order.</p>
+            )}
+          </section>
 
           {/* Reference Photos Gallery */}
           <div className="bg-white dark:bg-[#241a13] p-6 rounded-xl border border-[#d7c3b2]/20 dark:border-[#524438] shadow-sm">
@@ -527,7 +662,7 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             )}
           </div>
 
-          {/* Profitability Summary Bento Card */}
+          {/* Profitability Summary */}
           <div className="bg-[#fff1e7] dark:bg-[#2a2018] p-6 rounded-xl border border-[#d7c3b2]/30 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
@@ -538,16 +673,22 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
               </span>
             </div>
 
+            <div className="grid grid-cols-2 gap-x-5 gap-y-2 border-y border-[#d7c3b2]/20 py-3 text-xs">
+              <span className="text-[#524438] dark:text-[#d7c3b2]">Revenue</span>
+              <span className="text-right font-semibold text-[#211a15] dark:text-white">{order.price.toLocaleString()} {shopProfile.currency}</span>
+              <span className="text-[#524438] dark:text-[#d7c3b2]">Material Costs</span>
+              <span className="text-right font-semibold text-[#211a15] dark:text-white">{materialCosts.toLocaleString()} {shopProfile.currency}</span>
+              <span className="text-[#524438] dark:text-[#d7c3b2]">Labor / Tailoring Costs</span>
+              <span className="text-right font-semibold text-[#211a15] dark:text-white">{laborCosts.toLocaleString()} {shopProfile.currency}</span>
+              <span className="font-bold text-[#524438] dark:text-[#d7c3b2]">Total Direct Costs</span>
+              <span className="text-right font-bold text-[#211a15] dark:text-white">{totalCosts.toLocaleString()} {shopProfile.currency}</span>
+            </div>
+
             <div className="flex justify-between items-baseline">
-              <span className="text-sm text-[#524438] dark:text-[#d7c3b2]">Net Profit:</span>
+              <span className="text-sm font-semibold text-[#524438] dark:text-[#d7c3b2]">Net Profit</span>
               <span className="font-headline text-2xl font-bold text-[#885000] dark:text-[#ffb86d]">
                 {orderProfit.toLocaleString()} {shopProfile.currency}
               </span>
-            </div>
-
-            <div className="pt-2 border-t border-[#d7c3b2]/20 flex justify-between text-xs text-[#847466]">
-              <span>Revenue: {order.price.toLocaleString()}</span>
-              <span>Total Cost: {totalCosts.toLocaleString()}</span>
             </div>
           </div>
         </div>
