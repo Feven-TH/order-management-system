@@ -57,7 +57,7 @@ export async function GET() {
 
   try {
     const [businessResult, themeResult, customersResult, partnersResult, ordersResult, invoicesResult, remindersResult, inventoryResult, costsResult, partnerPaymentsResult] = await Promise.all([
-      supabase.from('businesses').select('name, email, phone, currency').eq('id', tenant.businessId).single(),
+      supabase.from('businesses').select('name, email, phone, currency, order_statuses, measurement_fields').eq('id', tenant.businessId).single(),
       supabase.from('business_themes').select('*').eq('business_id', tenant.businessId).single(),
       supabase.from('customers').select('*').eq('business_id', tenant.businessId).order('created_at', { ascending: false }),
       supabase.from('partners').select('*').eq('business_id', tenant.businessId).order('created_at', { ascending: false }),
@@ -213,7 +213,10 @@ export async function GET() {
           harmonyName: 'Business theme',
           extractedPalette: [],
         },
-        statuses: ['Measurements Taken', 'In Progress (Cutting)', 'Ready for Fitting', 'Completed'],
+        statuses: businessResult.data.order_statuses || ['Confirmed', 'In Progress', 'Ready for Fitting', 'Ready', 'Completed'],
+        measurementFields: Array.isArray(businessResult.data.measurement_fields)
+          ? businessResult.data.measurement_fields
+          : ['shoulder', 'bust', 'waist', 'hips', 'length', 'sleeve', 'neck', 'inseam'],
         activeMetrics: [],
       },
       orders: apiOrders,
@@ -478,6 +481,10 @@ export async function POST(request: Request) {
           email: nullable(profile.email),
           phone: nullable(profile.phone),
           currency: profile.currency || 'ETB',
+          order_statuses: Array.isArray(profile.statuses) && profile.statuses.length ? profile.statuses : ['Confirmed'],
+          measurement_fields: Array.isArray(profile.measurementFields) && profile.measurementFields.length
+            ? profile.measurementFields
+            : ['shoulder', 'bust', 'waist', 'hips', 'length', 'sleeve', 'neck', 'inseam'],
         }).eq('id', tenant.businessId);
         if (businessError) throw businessError;
         const theme = profile.businessTheme;

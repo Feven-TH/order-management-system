@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   Calendar,
@@ -57,15 +57,12 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   const [quantityUsed, setQuantityUsed] = useState('');
   const [materialError, setMaterialError] = useState<string | null>(null);
 
-  const statuses: OrderStatus[] = [
-    'Confirmed',
-    'In Progress',
-    'In Cutting',
-    'First Fitting',
-    'Ready for Fitting',
-    'Ready',
-    'Completed',
-  ];
+  useEffect(() => {
+    setMeasurementDraft(order.measurements || {});
+    setIsEditingMeasurements(false);
+  }, [order.id, order.measurements]);
+
+  const statuses: OrderStatus[] = shopProfile.statuses;
 
   const inventoryMaterialCosts = order.materials.reduce((acc, material) => acc + material.totalCost, 0);
   const additionalMaterialCosts = order.costs

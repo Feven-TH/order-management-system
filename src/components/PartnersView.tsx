@@ -18,6 +18,7 @@ interface PartnersViewProps {
   invoices: PartnerInvoice[];
   shopProfile: ShopProfile;
   onAddPartner: (partner: Partner) => void;
+  onUpdatePartner: (partner: Partner) => void;
   onSettleInvoice: (invoiceId: string) => void;
   onSettlePartnerBalance: (partnerId: string, amount: number) => void;
 }
@@ -27,10 +28,12 @@ export const PartnersView: React.FC<PartnersViewProps> = ({
   invoices,
   shopProfile,
   onAddPartner,
+  onUpdatePartner,
   onSettleInvoice,
   onSettlePartnerBalance,
 }) => {
   const [showAddPartnerModal, setShowAddPartnerModal] = useState(false);
+  const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [newPartnerName, setNewPartnerName] = useState('');
   const [newPartnerType, setNewPartnerType] = useState<Partner['type']>('Fabric Supplier');
   const [newPartnerPhone, setNewPartnerPhone] = useState('');
@@ -47,17 +50,18 @@ export const PartnersView: React.FC<PartnersViewProps> = ({
     if (!newPartnerName) return;
 
     const partner: Partner = {
-      id: crypto.randomUUID(),
+      id: editingPartner?.id || crypto.randomUUID(),
       name: newPartnerName,
       type: newPartnerType,
       phone: newPartnerPhone,
-      balanceOwed: 0,
-      totalPaid: 0,
+      balanceOwed: editingPartner?.balanceOwed || 0,
+      totalPaid: editingPartner?.totalPaid || 0,
       notes: newPartnerNotes,
     };
 
-    onAddPartner(partner);
+    if (editingPartner) onUpdatePartner(partner); else onAddPartner(partner);
     setShowAddPartnerModal(false);
+    setEditingPartner(null);
     setNewPartnerName('');
     setNewPartnerPhone('');
     setNewPartnerNotes('');
@@ -180,7 +184,8 @@ export const PartnersView: React.FC<PartnersViewProps> = ({
         {partners.map((partner) => (
           <div
             key={partner.id}
-            className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/25 dark:border-[#524438] rounded-xl p-5 flex flex-col justify-between hover:shadow-md transition-all shadow-sm"
+            onClick={() => { setEditingPartner(partner); setNewPartnerName(partner.name); setNewPartnerType(partner.type); setNewPartnerPhone(partner.phone || ''); setNewPartnerNotes(partner.notes || ''); setShowAddPartnerModal(true); }}
+            className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/25 dark:border-[#524438] rounded-xl p-5 flex flex-col justify-between hover:shadow-md transition-all shadow-sm cursor-pointer"
           >
             <div>
               <div className="flex justify-between items-start mb-2">
@@ -226,7 +231,8 @@ export const PartnersView: React.FC<PartnersViewProps> = ({
 
               {partner.balanceOwed > 0 && (
                 <button
-                  onClick={() => {
+                    onClick={(event) => {
+                      event.stopPropagation();
                     setSettlePartner(partner);
                     setSettleAmount(partner.balanceOwed.toString());
                   }}

@@ -628,6 +628,10 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
               setPartners((prev) => [partner, ...prev]);
               void persistWorkspaceChange('save_partner', partner);
             }}
+            onUpdatePartner={(updated) => {
+              setPartners((prev) => prev.map((partner) => (partner.id === updated.id ? updated : partner)));
+              void persistWorkspaceChange('save_partner', updated);
+            }}
             onSettleInvoice={handleSettleInvoice}
             onSettlePartnerBalance={handleSettlePartnerBalance}
           />
@@ -638,6 +642,10 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
             reminders={reminders}
             shopProfile={shopProfile}
             onAddReminder={handleAddReminder}
+            onUpdateReminder={(updated) => {
+              setReminders((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+              void persistWorkspaceChange('save_reminder', updated);
+            }}
             onToggleReminder={handleToggleReminder}
             onDeleteReminder={handleDeleteReminder}
             onOpenMessageSender={handleOpenMessageSender}
@@ -679,6 +687,7 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
       <NewOrderModal
         isOpen={isNewOrderOpen}
         customers={customers}
+        orders={orders}
         shopProfile={shopProfile}
         preselectedCustomerId={newOrderPreselectedCustomerId}
         onClose={() => {

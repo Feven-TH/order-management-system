@@ -27,6 +27,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   onUpdateInventory,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [name, setName] = useState('');
   const [category, setCategory] = useState<InventoryItem['category']>('Fabric');
   const [stock, setStock] = useState('');
@@ -57,7 +58,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     if (!name) return;
 
     const newItem: InventoryItem = {
-      id: crypto.randomUUID(),
+      id: editingItem?.id || crypto.randomUUID(),
       name,
       category,
       stock: parseFloat(stock) || 0,
@@ -67,10 +68,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       supplier,
     };
 
-    onAddInventory(newItem);
+    if (editingItem) onUpdateInventory(newItem); else onAddInventory(newItem);
     setShowAddModal(false);
+    setEditingItem(null);
     setName('');
     setSupplier('');
+  };
+
+  const openEditItem = (item: InventoryItem) => {
+    setEditingItem(item);
+    setName(item.name);
+    setCategory(item.category);
+    setStock(String(item.stock));
+    setUnit(item.unit);
+    setCostPerUnit(String(item.costPerUnit));
+    setMinStockLevel(String(item.minStockLevel));
+    setSupplier(item.supplier || '');
+    setShowAddModal(true);
   };
 
   const handleStockAdjustment = (item: InventoryItem, delta: number) => {
@@ -95,7 +109,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
 
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => { setEditingItem(null); setName(''); setStock(''); setUnit(''); setCostPerUnit(''); setMinStockLevel(''); setSupplier(''); setShowAddModal(true); }}
           className="bg-[#a6681c] hover:bg-[#885000] text-white font-headline text-xs sm:text-sm font-semibold px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-lg shadow-sm flex items-center justify-center gap-1.5 sm:gap-2 active:scale-95 transition-all self-start sm:self-auto shrink-0 whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
@@ -159,7 +173,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           return (
             <div
               key={item.id}
-              className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/25 dark:border-[#524438] rounded-xl p-5 flex flex-col justify-between hover:shadow-md transition-all shadow-sm"
+              onClick={() => openEditItem(item)}
+              className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/25 dark:border-[#524438] rounded-xl p-5 flex flex-col justify-between hover:shadow-md transition-all shadow-sm cursor-pointer"
             >
               <div>
                 <div className="flex justify-between items-start mb-2">
@@ -207,13 +222,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                 <div className="flex items-center gap-1.5 bg-[#fff8f4] dark:bg-[#1a120c] p-1 rounded-lg border border-[#d7c3b2]/30">
                   <button
-                    onClick={() => handleStockAdjustment(item, -1)}
+                    onClick={(event) => { event.stopPropagation(); handleStockAdjustment(item, -1); }}
                     className="w-7 h-7 rounded bg-white dark:bg-[#241a13] border border-[#d7c3b2]/40 text-[#211a15] dark:text-white font-bold flex items-center justify-center hover:bg-[#ede0d6]"
                   >
                     -
                   </button>
                   <button
-                    onClick={() => handleStockAdjustment(item, 1)}
+                    onClick={(event) => { event.stopPropagation(); handleStockAdjustment(item, 1); }}
                     className="w-7 h-7 rounded bg-[#885000] text-white font-bold flex items-center justify-center hover:bg-[#a6681c]"
                   >
                     +
@@ -276,7 +291,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <div className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-[#885000] dark:text-[#ffb86d]" />
                 <h3 className="font-headline font-bold text-base text-[#211a15] dark:text-white">
-                  Add Material / SKU
+                  {editingItem ? 'Edit Material / SKU' : 'Add Material / SKU'}
                 </h3>
               </div>
               <button

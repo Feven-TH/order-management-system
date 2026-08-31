@@ -18,11 +18,13 @@ export const INITIAL_SHOP_PROFILE: ShopProfile = {
   theme: 'dark',
   brandAccent: '#885000',
   statuses: [
-    'Measurements Taken',
-    'In Progress (Cutting)',
+    'Confirmed',
+    'In Progress',
     'Ready for Fitting',
+    'Ready',
     'Completed',
   ],
+  measurementFields: ['shoulder', 'bust', 'waist', 'hips', 'length', 'sleeve', 'neck', 'inseam'],
   activeMetrics: [
     'Total Revenue (MTD)',
     'Active Orders',

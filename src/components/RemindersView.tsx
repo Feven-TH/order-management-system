@@ -17,6 +17,7 @@ interface RemindersViewProps {
   reminders: ReminderItem[];
   shopProfile: ShopProfile;
   onAddReminder: (reminder: ReminderItem) => void;
+  onUpdateReminder: (reminder: ReminderItem) => void;
   onToggleReminder: (reminderId: string) => void;
   onDeleteReminder: (reminderId: string) => void;
   onOpenMessageSender: (name: string, phone: string, text: string) => void;
@@ -26,12 +27,14 @@ export const RemindersView: React.FC<RemindersViewProps> = ({
   reminders,
   shopProfile,
   onAddReminder,
+  onUpdateReminder,
   onToggleReminder,
   onDeleteReminder,
   onOpenMessageSender,
 }) => {
   const [filterType, setFilterType] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<ReminderItem | null>(null);
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
@@ -50,18 +53,19 @@ export const RemindersView: React.FC<RemindersViewProps> = ({
     if (!title) return;
 
     const newRem: ReminderItem = {
-      id: crypto.randomUUID(),
+      id: editingReminder?.id || crypto.randomUUID(),
       title,
       description: desc,
       dueDate,
       type,
-      completed: false,
+      completed: editingReminder?.completed || false,
       recipientName,
       recipientPhone,
     };
 
-    onAddReminder(newRem);
+    if (editingReminder) onUpdateReminder(newRem); else onAddReminder(newRem);
     setShowAddModal(false);
+    setEditingReminder(null);
     setTitle('');
     setDesc('');
     setRecipientName('');
@@ -128,15 +132,16 @@ export const RemindersView: React.FC<RemindersViewProps> = ({
           filteredReminders.map((rem) => (
             <div
               key={rem.id}
+              onClick={() => { setEditingReminder(rem); setTitle(rem.title); setDesc(rem.description); setDueDate(rem.dueDate); setType(rem.type); setRecipientName(rem.recipientName || ''); setRecipientPhone(rem.recipientPhone || ''); setShowAddModal(true); }}
               className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
                 rem.completed
                   ? 'bg-[#fff8f4]/60 dark:bg-[#1a120c] opacity-60'
                   : 'hover:bg-[#fff1e7]/30'
-              }`}
+              } cursor-pointer`}
             >
               <div className="flex items-start gap-3.5">
                 <button
-                  onClick={() => onToggleReminder(rem.id)}
+                  onClick={(event) => { event.stopPropagation(); onToggleReminder(rem.id); }}
                   className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                     rem.completed
                       ? 'bg-green-700 border-green-700 text-white'
@@ -174,7 +179,7 @@ export const RemindersView: React.FC<RemindersViewProps> = ({
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 {rem.recipientPhone && (
                   <button
-                    onClick={() => handleMessageTrigger(rem)}
+                    onClick={(event) => { event.stopPropagation(); handleMessageTrigger(rem); }}
                     className="px-3 py-1.5 rounded-lg bg-green-50 text-green-800 border border-green-200 hover:bg-green-100 text-xs font-bold flex items-center gap-1.5 transition-all"
                   >
                     <MessageCircle className="w-3.5 h-3.5 text-green-700" />
@@ -183,7 +188,7 @@ export const RemindersView: React.FC<RemindersViewProps> = ({
                 )}
 
                 <button
-                  onClick={() => onDeleteReminder(rem.id)}
+                  onClick={(event) => { event.stopPropagation(); onDeleteReminder(rem.id); }}
                   className="p-1.5 rounded text-[#847466] hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />

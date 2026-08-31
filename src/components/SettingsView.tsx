@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Settings,
   Camera,
@@ -44,9 +44,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const [profileDraft, setProfileDraft] = useState<ShopProfile>(shopProfile);
   const [newStatusName, setNewStatusName] = useState('');
+  const [newMeasurementField, setNewMeasurementField] = useState('');
   const [savedToast, setSavedToast] = useState(false);
   const [accountNotice, setAccountNotice] = useState<string | null>(null);
   const [isAnalyzingLogo, setIsAnalyzingLogo] = useState(false);
+
+  useEffect(() => {
+    setProfileDraft(shopProfile);
+  }, [shopProfile]);
 
   const availableMetrics = [
     'Total Revenue (MTD)',
@@ -131,6 +136,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       ...profileDraft,
       statuses: profileDraft.statuses.filter((_, idx) => idx !== index),
     });
+  };
+
+  const handleAddMeasurementField = () => {
+    const field = newMeasurementField.trim().toLowerCase().replace(/\s+/g, '_');
+    if (!field || profileDraft.measurementFields.includes(field)) return;
+    setProfileDraft({ ...profileDraft, measurementFields: [...profileDraft.measurementFields, field] });
+    setNewMeasurementField('');
+  };
+
+  const handleDeleteMeasurementField = (field: string) => {
+    setProfileDraft({ ...profileDraft, measurementFields: profileDraft.measurementFields.filter((item) => item !== field) });
   };
 
   const handleToggleMetric = (metric: string) => {
@@ -366,6 +382,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="px-4 py-2 bg-[#885000] text-white text-xs font-bold rounded-lg hover:bg-[#a6681c] flex items-center gap-1"
           >
             <Plus className="w-4 h-4" /> Add Status
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-[#241a13] rounded-xl border border-[#d7c3b2]/20 dark:border-[#524438] shadow-sm p-6 space-y-4">
+        <h2 className="font-headline font-bold text-lg text-[#211a15] dark:text-white border-b border-[#d7c3b2]/20 pb-3 flex items-center gap-2">
+          <Sliders className="w-5 h-5 text-[#885000]" /> Measurement Fields
+        </h2>
+        <p className="text-xs text-[#524438] dark:text-[#d7c3b2]">These fields appear on every new order. Existing measurements remain intact when a field is removed.</p>
+        <div className="flex flex-wrap gap-2">
+          {profileDraft.measurementFields.map((field) => (
+            <span key={field} className="inline-flex items-center gap-1 rounded-lg bg-[#fff8f4] dark:bg-[#1a120c] px-2.5 py-1.5 text-xs font-semibold text-[#524438] dark:text-[#d7c3b2] border border-[#d7c3b2]/20">
+              {field.replace(/_/g, ' ')}
+              <button type="button" onClick={() => handleDeleteMeasurementField(field)} className="text-[#847466] hover:text-[#ba1a1a]" aria-label={`Remove ${field}`}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newMeasurementField}
+            onChange={(e) => setNewMeasurementField(e.target.value)}
+            placeholder="e.g. wrist circumference"
+            className="flex-1 px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm"
+          />
+          <button type="button" onClick={handleAddMeasurementField} className="px-4 py-2 bg-[#885000] text-white text-xs font-bold rounded-lg hover:bg-[#a6681c] flex items-center gap-1">
+            <Plus className="w-4 h-4" /> Add Field
           </button>
         </div>
       </div>

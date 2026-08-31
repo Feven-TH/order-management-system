@@ -1,12 +1,4 @@
-export type OrderStatus =
-  | 'Confirmed'
-  | 'In Progress'
-  | 'In Cutting'
-  | 'First Fitting'
-  | 'Ready for Fitting'
-  | 'Ready'
-  | 'Completed'
-  | 'Measurements Taken';
+export type OrderStatus = string;
 
 export type PaymentStatus = 'Fully Paid' | 'Partially Paid' | 'Unpaid';
 
@@ -173,6 +165,7 @@ export interface ShopProfile {
   brandAccent: string;
   businessTheme?: BusinessTheme;
   statuses: string[];
+  measurementFields: string[];
   activeMetrics: string[];
 }
 

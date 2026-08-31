@@ -18,6 +18,7 @@ import confetti from 'canvas-confetti';
 interface NewOrderModalProps {
   isOpen: boolean;
   customers: Customer[];
+  orders: Order[];
   shopProfile: ShopProfile;
   preselectedCustomerId?: string | null;
   onClose: () => void;
@@ -28,6 +29,7 @@ interface NewOrderModalProps {
 export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   isOpen,
   customers,
+  orders,
   shopProfile,
   preselectedCustomerId,
   onClose,
@@ -62,6 +64,12 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
       setSelectedCustomerId(customers[0].id);
     }
   }, [preselectedCustomerId, customers, isOpen]);
+
+  useEffect(() => {
+    if (measurementMode !== 'reuse' || !selectedCustomerId) return;
+    const previousOrder = orders.find((order) => order.customerId === selectedCustomerId);
+    setMeasurements(previousOrder?.measurements || {});
+  }, [measurementMode, selectedCustomerId, orders]);
 
   if (!isOpen) return null;
 
@@ -147,7 +155,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
       price: parsedPrice,
       deposit: parsedDeposit,
       paid: parsedDeposit,
-      status: 'Confirmed',
+      status: shopProfile.statuses[0] || 'Confirmed',
       dueDate: dueDate,
       createdAt: new Date().toISOString().split('T')[0],
       description: description,
@@ -337,18 +345,18 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="p-3 bg-[#fff8f4] dark:bg-[#1a120c] rounded-lg border border-[#d7c3b2]/20 dark:border-[#524438]/40 text-xs text-[#524438] dark:text-[#d7c3b2]">
-                  <p className="font-semibold text-[#211a15] dark:text-white mb-1">
-                    Previous measurements are not connected to customer profiles yet.
-                  </p>
-                  <p className="text-[#847466] dark:text-[#a08e80]">
-                    Enter measurements for this order.
-                  </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                  {shopProfile.measurementFields.map((param) => (
+                    <div key={param} className="p-2 bg-[#fff8f4] dark:bg-[#1a120c] rounded text-xs">
+                      <span className="block uppercase font-bold text-[#847466]">{param}</span>
+                      <span className="font-mono font-bold text-[#211a15] dark:text-white">{measurements[param] ?? '—'} cm</span>
+                    </div>
+                  ))}
                 </div>
               )
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                {['shoulder', 'bust', 'waist', 'hips', 'length', 'sleeve', 'neck', 'inseam'].map(
+                {shopProfile.measurementFields.map(
                   (param) => (
                     <div key={param}>
                       <label className="block text-[10px] uppercase font-bold text-[#847466] dark:text-[#a08e80] mb-0.5">
