@@ -61,8 +61,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 }) => {
   // State management
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(initialFilter);
-  const [paymentFilter, setPaymentFilter] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<string>(
+    initialFilter === 'All Orders' || initialFilter === 'Unpaid' ? 'All' : initialFilter
+  );
+  const [paymentFilter, setPaymentFilter] = useState<string>(
+    initialFilter === 'Unpaid' ? 'Unpaid' : 'All'
+  );
   const [urgencyFilter, setUrgencyFilter] = useState<string>('All');
   const [sortBy, setSortBy] = useState<SortOption>('dueDate_asc');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -80,16 +84,21 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     'Completed': 8,
   };
 
-  const allStatuses: { label: string; value: string }[] = [
-    { label: 'All Orders', value: 'All' },
-    { label: 'Confirmed', value: 'Confirmed' },
-    { label: 'Measurements Taken', value: 'Measurements Taken' },
-    { label: 'In Cutting', value: 'In Cutting' },
-    { label: 'First Fitting', value: 'First Fitting' },
-    { label: 'In Progress', value: 'In Progress' },
-    { label: 'Ready for Fitting', value: 'Ready for Fitting' },
-    { label: 'Ready for Pickup', value: 'Ready' },
+  const statusTabs: { label: string; value: string }[] = [
+    { label: 'All', value: 'All' },
+    { label: 'Needs attention', value: 'Needs attention' },
+    { label: 'In progress', value: 'In progress' },
+    { label: 'Ready', value: 'Ready' },
     { label: 'Completed', value: 'Completed' },
+  ];
+
+  const inProgressStatuses: OrderStatus[] = [
+    'Confirmed',
+    'Measurements Taken',
+    'In Cutting',
+    'First Fitting',
+    'In Progress',
+    'Ready for Fitting',
   ];
 
   // Helper to determine due date urgency
@@ -134,8 +143,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
       if (!matchesSearch) return false;
 
-      // Status filter
-      if (statusFilter !== 'All' && order.status !== statusFilter) {
+      // Status navigation groups the detailed workflow into a few calm, scannable views.
+      if (statusFilter === 'Needs attention') {
+        if (order.status === 'Completed' || getDueUrgency(order.dueDate).type !== 'overdue') return false;
+      } else if (statusFilter === 'In progress') {
+        if (!inProgressStatuses.includes(order.status)) return false;
+      } else if (statusFilter !== 'All' && order.status !== statusFilter) {
         return false;
       }
 
@@ -420,75 +433,78 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         </div>
       </div>
 
-      {/* Main Filter & Search Control Center */}
-      <section className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-2xl p-4 md:p-5 shadow-2xs space-y-4">
-        {/* Top Row: Search Input + Sorting Selector + View Toggle */}
-        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-          {/* Search Box */}
-          <div className="relative flex-1 max-w-xl">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#847466]" />
+      {/* Compact order controls */}
+      <section className="space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2 border-y border-[#d7c3b2]/45 dark:border-[#524438] py-2.5">
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 text-[#847466]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by customer, phone, garment style, notes..."
-              className="w-full pl-10 pr-10 py-2.5 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-xl focus:border-[#a6681c] focus:ring-1 focus:ring-[#a6681c] outline-none text-sm text-[#211a15] dark:text-white placeholder:text-[#847466] shadow-2xs transition-all"
+              placeholder="Search orders"
+              className="w-full bg-transparent pl-7 pr-7 py-1.5 outline-none text-sm text-[#211a15] dark:text-white placeholder:text-[#847466]"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#847466] hover:text-[#885000] dark:hover:text-[#ffb86d] p-1"
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-[#847466] hover:text-[#885000] p-1"
+                aria-label="Clear search"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Controls: Sorting Dropdown & View Mode Switch */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Sort Metric Selector */}
-            <div className="flex items-center gap-1.5 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-xl px-3 py-1.5 text-xs">
-              <ArrowUpDown className="w-3.5 h-3.5 text-[#885000] shrink-0" />
-              <span className="text-[#847466] dark:text-[#a08e80] font-medium hidden sm:inline">Sort:</span>
+          <div className="flex items-center gap-1.5 self-end lg:self-auto">
+            <button
+              onClick={() => setShowFilterDrawer((isOpen) => !isOpen)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                showFilterDrawer || paymentFilter !== 'All' || urgencyFilter !== 'All'
+                  ? 'text-[#885000] dark:text-[#ffb86d]'
+                  : 'text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]'
+              }`}
+              aria-expanded={showFilterDrawer}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              Filters
+            </button>
+
+            <div className="flex items-center gap-1 border-l border-[#d7c3b2]/45 dark:border-[#524438] pl-2.5">
+              <ArrowUpDown className="w-3.5 h-3.5 text-[#847466] shrink-0" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="bg-transparent text-xs font-semibold text-[#211a15] dark:text-white outline-none cursor-pointer pr-1"
+                className="max-w-40 bg-transparent text-xs font-semibold text-[#524438] dark:text-[#d7c3b2] outline-none cursor-pointer"
+                aria-label="Sort orders"
               >
-                <option value="dueDate_asc">Due Date (Urgent First)</option>
-                <option value="dueDate_desc">Due Date (Latest First)</option>
-                <option value="createdAt_desc">Date Created (Newest First)</option>
-                <option value="createdAt_asc">Date Created (Oldest First)</option>
-                <option value="price_desc">Price / Value (High to Low)</option>
-                <option value="price_asc">Price / Value (Low to High)</option>
-                <option value="balance_desc">Balance Due (Highest First)</option>
-                <option value="customer_asc">Customer Name (A to Z)</option>
-                <option value="customer_desc">Customer Name (Z to A)</option>
-                <option value="status_workflow">Production Workflow Stage</option>
+                <option value="dueDate_asc">Due date</option>
+                <option value="dueDate_desc">Due date, latest</option>
+                <option value="createdAt_desc">Newest first</option>
+                <option value="createdAt_asc">Oldest first</option>
+                <option value="price_desc">Value, high to low</option>
+                <option value="price_asc">Value, low to high</option>
+                <option value="balance_desc">Balance due</option>
+                <option value="customer_asc">Customer, A–Z</option>
+                <option value="customer_desc">Customer, Z–A</option>
+                <option value="status_workflow">Workflow stage</option>
               </select>
             </div>
 
-            {/* View Mode Toggle (Grid vs Table) */}
-            <div className="flex items-center bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-xl p-1">
+            <div className="flex items-center border-l border-[#d7c3b2]/45 dark:border-[#524438] pl-1.5">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-[#a6681c] text-white shadow-2xs'
-                    : 'text-[#847466] hover:text-[#885000] dark:hover:text-[#ffb86d]'
-                }`}
-                title="Grid Cards View"
+                className={`p-1.5 transition-colors ${viewMode === 'grid' ? 'text-[#885000] dark:text-[#ffb86d]' : 'text-[#847466] hover:text-[#885000]'}`}
+                title="Grid view"
+                aria-label="Grid view"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg transition-all ${
-                  viewMode === 'table'
-                    ? 'bg-[#a6681c] text-white shadow-2xs'
-                    : 'text-[#847466] hover:text-[#885000] dark:hover:text-[#ffb86d]'
-                }`}
-                title="Detailed Table View"
+                className={`p-1.5 transition-colors ${viewMode === 'table' ? 'text-[#885000] dark:text-[#ffb86d]' : 'text-[#847466] hover:text-[#885000]'}`}
+                title="Table view"
+                aria-label="Table view"
               >
                 <ListIcon className="w-4 h-4" />
               </button>
@@ -496,84 +512,74 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           </div>
         </div>
 
-        {/* Status Filter Horizontal Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
-          {allStatuses.map((st) => {
-            const isSelected = statusFilter === st.value;
-            const count = st.value === 'All' ? orders.length : orders.filter((o) => o.status === st.value).length;
-            return (
-              <button
-                key={st.value}
-                onClick={() => setStatusFilter(st.value)}
-                className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-headline font-semibold transition-all flex items-center gap-1.5 ${
-                  isSelected
-                    ? 'bg-[#a6681c] text-white shadow-2xs'
-                    : 'bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 text-[#524438] dark:text-[#d7c3b2] hover:bg-[#ede0d6]/60 dark:hover:bg-[#33261c]'
-                }`}
+        {showFilterDrawer && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-[#524438] dark:text-[#d7c3b2]">
+            <label className="flex items-center gap-2">
+              <span className="text-[#847466]">Payment</span>
+              <select
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value)}
+                className="bg-transparent border-b border-[#d7c3b2]/60 dark:border-[#524438] py-1 font-semibold outline-none"
               >
-                <span>{st.label}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected
-                      ? 'bg-white/25 text-white'
-                      : 'bg-[#ede0d6] dark:bg-[#33261c] text-[#784a05] dark:text-[#ffb86d]'
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Secondary Filter Chips: Payment & Urgency filters */}
-        <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-[#d7c3b2]/20 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[#847466] dark:text-[#a08e80] font-medium">Payment:</span>
-            {['All', 'Fully Paid', 'Partially Paid', 'Has Balance'].map((pay) => (
-              <button
-                key={pay}
-                onClick={() => setPaymentFilter(pay)}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
-                  paymentFilter === pay
-                    ? 'bg-[#885000] text-white font-bold'
-                    : 'bg-transparent text-[#524438] dark:text-[#d7c3b2] hover:bg-[#ede0d6]/40'
-                }`}
+                <option value="All">Any payment</option>
+                <option value="Fully Paid">Fully paid</option>
+                <option value="Partially Paid">Partially paid</option>
+                <option value="Unpaid">Unpaid</option>
+                <option value="Has Balance">Has balance</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2">
+              <span className="text-[#847466]">Urgency</span>
+              <select
+                value={urgencyFilter}
+                onChange={(e) => setUrgencyFilter(e.target.value)}
+                className="bg-transparent border-b border-[#d7c3b2]/60 dark:border-[#524438] py-1 font-semibold outline-none"
               >
-                {pay}
-              </button>
-            ))}
-
-            <span className="text-[#847466] dark:text-[#a08e80] font-medium ml-2">Urgency:</span>
-            {['All', 'Overdue', 'Today / Tomorrow', 'This Week'].map((urg) => (
-              <button
-                key={urg}
-                onClick={() => setUrgencyFilter(urg)}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
-                  urgencyFilter === urg
-                    ? 'bg-rose-400 text-white font-bold'
-                    : 'bg-transparent text-[#524438] dark:text-[#d7c3b2] hover:bg-[#ede0d6]/40'
-                }`}
-              >
-                {urg}
-              </button>
-            ))}
+                <option value="All">Any due date</option>
+                <option value="Overdue">Overdue</option>
+                <option value="Today / Tomorrow">Today or tomorrow</option>
+                <option value="This Week">This week</option>
+              </select>
+            </label>
           </div>
+        )}
 
-          {(statusFilter !== 'All' || paymentFilter !== 'All' || urgencyFilter !== 'All' || searchQuery) && (
+        {(paymentFilter !== 'All' || urgencyFilter !== 'All') && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {paymentFilter !== 'All' && (
+              <button
+                onClick={() => setPaymentFilter('All')}
+                className="inline-flex items-center gap-1 rounded-md bg-[#f3ede4] dark:bg-[#33261c] px-2 py-1 text-[11px] font-medium text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]"
+              >
+                Payment: {paymentFilter} <X className="w-3 h-3" />
+              </button>
+            )}
+            {urgencyFilter !== 'All' && (
+              <button
+                onClick={() => setUrgencyFilter('All')}
+                className="inline-flex items-center gap-1 rounded-md bg-[#f3ede4] dark:bg-[#33261c] px-2 py-1 text-[11px] font-medium text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]"
+              >
+                Urgency: {urgencyFilter} <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+
+        <nav className="flex items-center gap-5 overflow-x-auto border-b border-[#d7c3b2]/45 dark:border-[#524438] hide-scrollbar" aria-label="Order status">
+          {statusTabs.map((tab) => (
             <button
-              onClick={() => {
-                setStatusFilter('All');
-                setPaymentFilter('All');
-                setUrgencyFilter('All');
-                setSearchQuery('');
-              }}
-              className="text-rose-500 hover:underline flex items-center gap-1 text-xs font-semibold ml-auto"
+              key={tab.value}
+              onClick={() => setStatusFilter(tab.value)}
+              className={`whitespace-nowrap border-b-2 py-2 text-sm font-medium transition-colors ${
+                statusFilter === tab.value
+                  ? 'border-amber-600 text-[#211a15] dark:text-white'
+                  : 'border-transparent text-[#847466] hover:text-[#524438] dark:hover:text-[#d7c3b2]'
+              }`}
             >
-              <RefreshCw className="w-3 h-3" /> Reset Filters
+              {tab.label}
             </button>
-          )}
-        </div>
+          ))}
+        </nav>
       </section>
 
       {/* Orders List View (Grid Cards vs Table) */}
