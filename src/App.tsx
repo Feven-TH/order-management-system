@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ActiveView,
   Customer,
@@ -97,22 +97,40 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
 
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+  const [workspaceNotice, setWorkspaceNotice] = useState<string | null>(null);
+  const workspaceMutationQueue = useRef<Promise<void>>(Promise.resolve());
 
-  const persistWorkspaceChange = async (action: string, payload: unknown) => {
-    try {
-      const response = await fetch('/api/workspace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, payload }),
-      });
+  const persistWorkspaceChange = (action: string, payload: unknown): Promise<boolean> => {
+    const request = async (): Promise<boolean> => {
+      try {
+        const response = await fetch('/api/workspace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, payload }),
+        });
 
-      if (!response.ok) {
-        throw new Error('The database did not accept this change');
+        // Supabase mutations may correctly return no rows. The route's HTTP
+        // status is the acknowledgement here, not a response data payload.
+        if (response.ok) return true;
+
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || `The database did not accept this change (HTTP ${response.status})`);
+      } catch (error) {
+        console.error('Workspace save failed', { action, error });
+        setWorkspaceNotice('Could not sync this change. Please try again.');
+        return false;
       }
-    } catch (error) {
-      console.error(error);
-      window.alert('This change could not be saved to the database. Please refresh and try again.');
-    }
+    };
+
+    // Several saves have database dependencies (for example, a reminder
+    // references a newly-created order). Queue requests in UI order so a
+    // dependent mutation cannot reach Supabase before its parent row exists.
+    const queuedRequest = workspaceMutationQueue.current.then(request, request);
+    workspaceMutationQueue.current = queuedRequest.then(
+      () => undefined,
+      () => undefined
+    );
+    return queuedRequest;
   };
 
   useEffect(() => {
@@ -132,9 +150,9 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
         setReminders(data.reminders || []);
         setInventory(data.inventory || []);
       } catch (error) {
-        console.error(error);
+        console.error('Workspace load failed', error);
         if (!cancelled) {
-          window.alert('Could not load your Supabase workspace. Check that the tenant migration was applied.');
+          setWorkspaceNotice('Could not load the latest workspace data. Please refresh and try again.');
         }
       } finally {
         if (!cancelled) setWorkspaceLoaded(true);
@@ -248,9 +266,13 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
       recipientPhone: newOrder.customerPhone,
       orderId: newOrder.id,
     };
-    setReminders((prev) => [newRem, ...prev]);
-    void persistWorkspaceChange('save_order', newOrder);
-    void persistWorkspaceChange('save_reminder', newRem);
+    void (async () => {
+      const orderSaved = await persistWorkspaceChange('save_order', newOrder);
+      if (!orderSaved) return;
+
+      setReminders((prev) => [newRem, ...prev]);
+      await persistWorkspaceChange('save_reminder', newRem);
+    })();
 
     // Automatically navigate to the newly created order details
     handleSelectOrder(newOrder);
@@ -633,6 +655,23 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
         defaultMessage={messageModalState.message}
         onClose={() => setMessageModalState((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {workspaceNotice && (
+        <div
+          role="alert"
+          className="fixed right-4 bottom-4 z-[100] flex max-w-sm items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-lg dark:border-amber-800 dark:bg-[#33261c] dark:text-amber-100"
+        >
+          <p>{workspaceNotice}</p>
+          <button
+            type="button"
+            onClick={() => setWorkspaceNotice(null)}
+            className="-mr-1 -mt-1 p-1 text-amber-800 hover:text-amber-950 dark:text-amber-200 dark:hover:text-white"
+            aria-label="Dismiss notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
     </div>
   );

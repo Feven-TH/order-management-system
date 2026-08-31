@@ -45,6 +45,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [profileDraft, setProfileDraft] = useState<ShopProfile>(shopProfile);
   const [newStatusName, setNewStatusName] = useState('');
   const [savedToast, setSavedToast] = useState(false);
+  const [accountNotice, setAccountNotice] = useState<string | null>(null);
   const [isAnalyzingLogo, setIsAnalyzingLogo] = useState(false);
 
   const availableMetrics = [
@@ -158,6 +159,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {savedToast && (
         <div className="p-3 bg-green-100 text-green-900 text-xs font-bold rounded-lg border border-green-300 flex items-center gap-2 shadow-sm animate-fadeIn">
           <Check className="w-4 h-4" /> Workshop profile and settings saved successfully!
+        </div>
+      )}
+
+      {accountNotice && (
+        <div role="status" className="p-3 bg-green-100 text-green-900 text-xs font-bold rounded-lg border border-green-300 flex items-center gap-2 shadow-sm animate-fadeIn">
+          <Check className="w-4 h-4" /> {accountNotice}
         </div>
       )}
 
@@ -589,7 +596,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="pt-4 border-t border-[#d7c3b2]/20 flex justify-between items-center">
           <button
             type="button"
-            onClick={() => alert('Password reset verification email sent.')}
+            onClick={() => {
+              setAccountNotice('Password reset verification email sent.');
+              window.setTimeout(() => setAccountNotice(null), 2500);
+            }}
             className="text-xs font-bold text-[#885000] hover:underline"
           >
             Change Workshop Password
