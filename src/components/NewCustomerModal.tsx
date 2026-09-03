@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Phone, Mail, MapPin, FileText } from 'lucide-react';
-import { Customer } from '../types';
+import { X, User, Phone, Mail, MapPin, FileText, Ruler } from 'lucide-react';
+import { Customer, OrderMeasurement, ShopProfile } from '../types';
 
 interface NewCustomerModalProps {
   isOpen: boolean;
   customerToEdit?: Customer | null;
+  shopProfile: ShopProfile;
   onClose: () => void;
   onSaveCustomer: (customer: Customer) => void;
 }
@@ -12,6 +13,7 @@ interface NewCustomerModalProps {
 export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
   isOpen,
   customerToEdit,
+  shopProfile,
   onClose,
   onSaveCustomer,
 }) => {
@@ -21,6 +23,7 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [measurements, setMeasurements] = useState<OrderMeasurement>({});
 
   useEffect(() => {
     if (customerToEdit) {
@@ -30,6 +33,7 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
       setEmail(customerToEdit.email || '');
       setAddress(customerToEdit.address || '');
       setNotes(customerToEdit.notes || '');
+      setMeasurements(customerToEdit.measurements || {});
     } else {
       setName('');
       setPhone('');
@@ -37,6 +41,7 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
       setEmail('');
       setAddress('');
       setNotes('');
+      setMeasurements({});
     }
   }, [customerToEdit, isOpen]);
 
@@ -61,6 +66,7 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
       email,
       address,
       notes,
+      measurements,
       initials: initials || 'CL',
       totalOrders: customerToEdit ? customerToEdit.totalOrders : 0,
       balance: customerToEdit ? customerToEdit.balance : 0,
@@ -108,6 +114,39 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
               />
             </div>
           </div>
+
+          <section className="rounded-xl border border-[#d7c3b2]/30 dark:border-[#524438] bg-[#fff8f4] dark:bg-[#1a120c] p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Ruler className="w-4 h-4 text-[#885000] dark:text-[#ffb86d]" />
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">Measurement Profile (cm)</h3>
+                <p className="text-[11px] text-[#847466] dark:text-[#a08e80]">These fields follow your workshop configuration and prefill the client’s first order.</p>
+              </div>
+            </div>
+            {shopProfile.measurementFields.length ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {shopProfile.measurementFields.map((field) => (
+                  <label key={field} className="block">
+                    <span className="block text-[10px] uppercase font-bold text-[#847466] dark:text-[#a08e80] mb-0.5">{field.replace(/_/g, ' ')}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={measurements[field] ?? ''}
+                      onChange={(event) => setMeasurements({
+                        ...measurements,
+                        [field]: event.target.value === '' ? undefined : Number(event.target.value),
+                      })}
+                      placeholder="cm"
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-[#241a13] border border-[#d7c3b2]/30 dark:border-[#524438] rounded text-xs font-mono text-[#211a15] dark:text-white outline-none focus:border-[#885000]"
+                    />
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[#847466] dark:text-[#a08e80]">No measurement fields are configured yet.</p>
+            )}
+          </section>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

@@ -309,7 +309,6 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
           return {
             ...o,
             paid: newPaid,
-            status: newPaid >= o.price ? 'Ready' : o.status,
             paymentLogs: [...o.paymentLogs, log],
           };
         }
@@ -486,7 +485,7 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
   const unreadRemindersCount = reminders.filter((r) => !r.completed).length;
 
   const activeOrdersCount = orders.filter(
-    (o) => o.status !== 'Completed' && o.status !== 'Ready'
+    (o) => o.status !== shopProfile.statuses.at(-1) && o.status !== shopProfile.statuses.at(-2)
   ).length;
 
   if (!workspaceLoaded) {
@@ -723,6 +722,7 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
       <NewCustomerModal
         isOpen={isNewCustomerOpen}
         customerToEdit={customerToEdit}
+        shopProfile={shopProfile}
         onClose={() => {
           setIsNewCustomerOpen(false);
           setCustomerToEdit(null);

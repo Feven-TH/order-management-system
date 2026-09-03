@@ -71,6 +71,12 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
     setMeasurements(previousOrder?.measurements || {});
   }, [measurementMode, selectedCustomerId, orders]);
 
+  useEffect(() => {
+    if (measurementMode !== 'new' || !selectedCustomerId) return;
+    const customer = customers.find((item) => item.id === selectedCustomerId);
+    if (customer?.totalOrders === 0) setMeasurements(customer.measurements || {});
+  }, [measurementMode, selectedCustomerId, customers]);
+
   if (!isOpen) return null;
 
   const selectedCustomer =
@@ -125,6 +131,9 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
     const target = customers.find((c) => c.id === id);
     if (target && target.totalOrders === 0) {
       setMeasurementMode('new');
+      setMeasurements(target.measurements || {});
+    } else {
+      setMeasurements({});
     }
   };
 
@@ -155,7 +164,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
       price: parsedPrice,
       deposit: parsedDeposit,
       paid: parsedDeposit,
-      status: shopProfile.statuses[0] || 'Confirmed',
+      status: shopProfile.statuses[0],
       dueDate: dueDate,
       createdAt: new Date().toISOString().split('T')[0],
       description: description,
@@ -355,6 +364,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
                 </div>
               )
             ) : (
+              shopProfile.measurementFields.length ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
                 {shopProfile.measurementFields.map(
                   (param) => (
@@ -365,7 +375,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
                       <input
                         type="number"
                         placeholder="cm"
-                        value={measurements[param] || ''}
+                        value={measurements[param] ?? ''}
                         onChange={(e) =>
                           setMeasurements({
                             ...measurements,
@@ -378,6 +388,9 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
                   )
                 )}
               </div>
+              ) : (
+                <p className="text-xs text-[#847466] dark:text-[#a08e80]">No measurement fields are configured. Add them in Settings when you are ready.</p>
+              )
             )}
           </div>
 

@@ -45,6 +45,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [profileDraft, setProfileDraft] = useState<ShopProfile>(shopProfile);
   const [newStatusName, setNewStatusName] = useState('');
   const [newMeasurementField, setNewMeasurementField] = useState('');
+  const [editingMeasurementField, setEditingMeasurementField] = useState<string | null>(null);
+  const [measurementFieldDraft, setMeasurementFieldDraft] = useState('');
   const [savedToast, setSavedToast] = useState(false);
   const [accountNotice, setAccountNotice] = useState<string | null>(null);
   const [isAnalyzingLogo, setIsAnalyzingLogo] = useState(false);
@@ -123,15 +125,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleAddStatus = () => {
-    if (!newStatusName.trim()) return;
+    const status = newStatusName.trim();
+    if (!status || profileDraft.statuses.some((item) => item.toLowerCase() === status.toLowerCase())) return;
     setProfileDraft({
       ...profileDraft,
-      statuses: [...profileDraft.statuses, newStatusName.trim()],
+      statuses: [...profileDraft.statuses, status],
     });
     setNewStatusName('');
   };
 
   const handleDeleteStatus = (index: number) => {
+    if (profileDraft.statuses.length === 1) return;
     setProfileDraft({
       ...profileDraft,
       statuses: profileDraft.statuses.filter((_, idx) => idx !== index),
@@ -147,6 +151,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleDeleteMeasurementField = (field: string) => {
     setProfileDraft({ ...profileDraft, measurementFields: profileDraft.measurementFields.filter((item) => item !== field) });
+    if (editingMeasurementField === field) setEditingMeasurementField(null);
+  };
+
+  const handleSaveMeasurementField = (field: string) => {
+    const updatedField = measurementFieldDraft.trim().toLowerCase().replace(/\s+/g, '_');
+    if (!updatedField || updatedField === field) {
+      setEditingMeasurementField(null);
+      return;
+    }
+    if (profileDraft.measurementFields.some((item) => item !== field && item === updatedField)) return;
+    setProfileDraft({
+      ...profileDraft,
+      measurementFields: profileDraft.measurementFields.map((item) => item === field ? updatedField : item),
+    });
+    setEditingMeasurementField(null);
   };
 
   const handleToggleMetric = (metric: string) => {
@@ -359,8 +378,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleDeleteStatus(index)}
+                disabled={profileDraft.statuses.length === 1}
                 className="p-1 text-[#847466] hover:text-[#ba1a1a] transition-colors"
-                title="Remove stage"
+                title={profileDraft.statuses.length === 1 ? 'At least one stage is required' : 'Remove stage'}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -390,11 +410,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <h2 className="font-headline font-bold text-lg text-[#211a15] dark:text-white border-b border-[#d7c3b2]/20 pb-3 flex items-center gap-2">
           <Sliders className="w-5 h-5 text-[#885000]" /> Measurement Fields
         </h2>
-        <p className="text-xs text-[#524438] dark:text-[#d7c3b2]">These fields appear on every new order. Existing measurements remain intact when a field is removed.</p>
+        <p className="text-xs text-[#524438] dark:text-[#d7c3b2]">These fields appear on every new order. Add, rename, or remove fields as your workshop needs; existing order values are retained.</p>
         <div className="flex flex-wrap gap-2">
           {profileDraft.measurementFields.map((field) => (
             <span key={field} className="inline-flex items-center gap-1 rounded-lg bg-[#fff8f4] dark:bg-[#1a120c] px-2.5 py-1.5 text-xs font-semibold text-[#524438] dark:text-[#d7c3b2] border border-[#d7c3b2]/20">
-              {field.replace(/_/g, ' ')}
+              {editingMeasurementField === field ? (
+                <input
+                  autoFocus
+                  value={measurementFieldDraft}
+                  onChange={(event) => setMeasurementFieldDraft(event.target.value)}
+                  onBlur={() => handleSaveMeasurementField(field)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleSaveMeasurementField(field);
+                    }
+                    if (event.key === 'Escape') setEditingMeasurementField(null);
+                  }}
+                  aria-label={`Rename ${field}`}
+                  className="w-28 bg-transparent outline-none"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingMeasurementField(field);
+                    setMeasurementFieldDraft(field);
+                  }}
+                  className="hover:text-[#885000]"
+                  title="Rename field"
+                >
+                  {field.replace(/_/g, ' ')}
+                </button>
+              )}
               <button type="button" onClick={() => handleDeleteMeasurementField(field)} className="text-[#847466] hover:text-[#ba1a1a]" aria-label={`Remove ${field}`}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

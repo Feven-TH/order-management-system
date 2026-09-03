@@ -63,6 +63,10 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
   }, [order.id, order.measurements]);
 
   const statuses: OrderStatus[] = shopProfile.statuses;
+  const measurementFields = Array.from(new Set([
+    ...shopProfile.measurementFields,
+    ...Object.keys(order.measurements || {}),
+  ]));
 
   const inventoryMaterialCosts = order.materials.reduce((acc, material) => acc + material.totalCost, 0);
   const additionalMaterialCosts = order.costs
@@ -460,15 +464,9 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
               {/* Measurements values */}
               <div className="sm:col-span-8 grid grid-cols-2 gap-3">
-                {Object.entries(
-                  order.measurements || {
-                    shoulder: 38,
-                    bust: 92,
-                    waist: 70,
-                    hips: 98,
-                    length: 145,
-                  }
-                ).map(([key, val]) => (
+                {measurementFields.map((key) => {
+                  const val = order.measurements?.[key];
+                  return (
                   <div
                     key={key}
                     className="p-2.5 bg-[#fff8f4] dark:bg-[#1a120c] rounded-lg border border-[#d7c3b2]/20 flex items-center justify-between"
@@ -479,7 +477,7 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     {isEditingMeasurements ? (
                       <input
                         type="number"
-                        value={measurementDraft[key] || ''}
+                        value={measurementDraft[key] ?? ''}
                         onChange={(e) =>
                           setMeasurementDraft({
                             ...measurementDraft,
@@ -490,11 +488,12 @@ export const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                       />
                     ) : (
                       <span className="font-mono text-sm font-bold text-[#211a15] dark:text-white">
-                        {val} <span className="text-[11px] font-normal text-[#847466]">cm</span>
+                        {val ?? '—'} <span className="text-[11px] font-normal text-[#847466]">cm</span>
                       </span>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
             </div>

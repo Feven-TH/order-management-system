@@ -177,6 +177,7 @@ export async function GET() {
         email: customer.email || undefined,
         address: customer.address || undefined,
         notes: customer.notes || undefined,
+        measurements: customer.measurements || {},
         initials: customer.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'CL',
         totalOrders: customerOrders.length,
         balance: customerOrders.reduce((total, order) => total + Math.max(0, order.price - order.paid), 0),
@@ -295,6 +296,7 @@ export async function POST(request: Request) {
           email: nullable(customer.email),
           address: nullable(customer.address),
           notes: nullable(customer.notes),
+          measurements: customer.measurements || {},
         });
         if (error) throw error;
         break;
@@ -482,7 +484,7 @@ export async function POST(request: Request) {
           phone: nullable(profile.phone),
           currency: profile.currency || 'ETB',
           order_statuses: Array.isArray(profile.statuses) && profile.statuses.length ? profile.statuses : ['Confirmed'],
-          measurement_fields: Array.isArray(profile.measurementFields) && profile.measurementFields.length
+          measurement_fields: Array.isArray(profile.measurementFields)
             ? profile.measurementFields
             : ['shoulder', 'bust', 'waist', 'hips', 'length', 'sleeve', 'neck', 'inseam'],
         }).eq('id', tenant.businessId);

@@ -79,6 +79,7 @@ export interface Customer {
   email?: string;
   address?: string;
   notes?: string;
+  measurements?: OrderMeasurement;
   initials: string;
   avatarColor?: string;
   totalOrders: number;

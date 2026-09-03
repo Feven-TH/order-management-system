@@ -72,34 +72,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
-  // Status Workflow order for priority sorting
-  const workflowOrder: Record<OrderStatus, number> = {
-    'Confirmed': 1,
-    'Measurements Taken': 2,
-    'In Cutting': 3,
-    'First Fitting': 4,
-    'In Progress': 5,
-    'Ready for Fitting': 6,
-    'Ready': 7,
-    'Completed': 8,
-  };
-
+  // The configured order is also the workflow order used for sorting.
+  const workflowOrder = useMemo(
+    () => Object.fromEntries(shopProfile.statuses.map((status, index) => [status, index])) as Record<OrderStatus, number>,
+    [shopProfile.statuses]
+  );
   const statusTabs: { label: string; value: string }[] = [
     { label: 'All', value: 'All' },
-    { label: 'Needs attention', value: 'Needs attention' },
-    { label: 'In progress', value: 'In progress' },
-    { label: 'Ready', value: 'Ready' },
-    { label: 'Completed', value: 'Completed' },
+    ...shopProfile.statuses.map((status) => ({ label: status, value: status })),
   ];
-
-  const inProgressStatuses: OrderStatus[] = [
-    'Confirmed',
-    'Measurements Taken',
-    'In Cutting',
-    'First Fitting',
-    'In Progress',
-    'Ready for Fitting',
-  ];
+  const completedStatus = shopProfile.statuses.at(-1);
+  const readyForPickupStatus = shopProfile.statuses.at(-2);
 
   // Helper to determine due date urgency
   const getDueUrgency = (dueDateStr: string) => {
@@ -143,12 +126,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
       if (!matchesSearch) return false;
 
-      // Status navigation groups the detailed workflow into a few calm, scannable views.
-      if (statusFilter === 'Needs attention') {
-        if (order.status === 'Completed' || getDueUrgency(order.dueDate).type !== 'overdue') return false;
-      } else if (statusFilter === 'In progress') {
-        if (!inProgressStatuses.includes(order.status)) return false;
-      } else if (statusFilter !== 'All' && order.status !== statusFilter) {
+      if (statusFilter !== 'All' && order.status !== statusFilter) {
         return false;
       }
 
@@ -164,7 +142,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         if (urgencyFilter === 'Overdue' && urgency.type !== 'overdue') return false;
         if (urgencyFilter === 'Today / Tomorrow' && urgency.type !== 'today' && urgency.type !== 'tomorrow') return false;
         if (urgencyFilter === 'This Week' && urgency.days > 7) return false;
-        if (urgencyFilter === 'Active (Not Completed)' && order.status === 'Completed') return false;
+        if (urgencyFilter === 'Active (Not Completed)' && order.status === completedStatus) return false;
       }
 
       return true;
@@ -192,14 +170,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         case 'customer_desc':
           return b.customerName.localeCompare(a.customerName);
         case 'status_workflow':
-          return (workflowOrder[a.status] || 99) - (workflowOrder[b.status] || 99);
+          return (workflowOrder[a.status] ?? Number.MAX_SAFE_INTEGER) - (workflowOrder[b.status] ?? Number.MAX_SAFE_INTEGER);
         default:
           return 0;
       }
     });
 
     return result;
-  }, [orders, searchQuery, statusFilter, paymentFilter, urgencyFilter, sortBy]);
+  }, [orders, searchQuery, statusFilter, paymentFilter, urgencyFilter, sortBy, workflowOrder, completedStatus]);
 
   const ordersByDueDate = useMemo(() => {
     return [...filteredAndSortedOrders].sort((a, b) => {
@@ -213,11 +191,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const stats = useMemo(() => {
     const totalCount = orders.length;
     const inProduction = orders.filter(
-      (o) => o.status !== 'Completed' && o.status !== 'Ready'
+      (o) => o.status !== completedStatus && o.status !== readyForPickupStatus
     ).length;
-    const readyForPickup = orders.filter((o) => o.status === 'Ready').length;
+    const readyForPickup = orders.filter((o) => o.status === readyForPickupStatus).length;
     const overdueCount = orders.filter(
-      (o) => o.status !== 'Completed' && getDueUrgency(o.dueDate).type === 'overdue'
+      (o) => o.status !== completedStatus && getDueUrgency(o.dueDate).type === 'overdue'
     ).length;
     const totalRevenue = orders.reduce((sum, o) => sum + o.price, 0);
     const totalCollected = orders.reduce((sum, o) => sum + o.paid, 0);
@@ -232,7 +210,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       totalCollected,
       totalPendingCollection,
     };
-  }, [orders]);
+  }, [orders, completedStatus, readyForPickupStatus]);
 
   // Export orders list to Excel
   const handleExportOrdersExcel = () => {
@@ -264,25 +242,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
   // Helper for Status Badge Styling
   const getStatusBadgeClass = (status: OrderStatus) => {
-    switch (status) {
-      case 'Completed':
-        return 'bg-emerald-200 text-emerald-900 border-emerald-300';
-      case 'Ready':
-        return 'bg-emerald-200 text-emerald-900 border-emerald-300';
-      case 'Ready for Fitting':
-        return 'bg-gray-200 text-gray-900 border-gray-300';
-      case 'First Fitting':
-        return 'bg-violet-200 text-violet-900 border-violet-300';
-      case 'In Cutting':
-        return 'bg-amber-200 text-amber-900 border-amber-300';
-      case 'In Progress':
-        return 'bg-amber-200 text-amber-900 border-amber-300';
-      case 'Measurements Taken':
-        return 'bg-sky-200 text-sky-900 border-sky-300';
-      case 'Confirmed':
-      default:
-        return 'bg-gray-200 text-gray-900 border-gray-300';
+    const index = shopProfile.statuses.indexOf(status);
+    if (index === shopProfile.statuses.length - 1) {
+      return 'bg-emerald-200 text-emerald-900 border-emerald-300';
     }
+    if (index === shopProfile.statuses.length - 2) {
+      return 'bg-green-200 text-green-900 border-green-300';
+    }
+    return 'bg-gray-200 text-gray-900 border-gray-300';
   };
 
   const getDueDateClass = (dueDateStr: string) => {
@@ -410,7 +377,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
         {/* Ready for Pickup Card */}
         <div
           onClick={() => {
-            setStatusFilter('Ready');
+            setStatusFilter(readyForPickupStatus || 'All');
           }}
           className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-xl p-3.5 sm:p-4 shadow-2xs hover:border-[#a6681c]/60 cursor-pointer transition-all"
         >

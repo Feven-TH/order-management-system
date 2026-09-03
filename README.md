@@ -78,7 +78,7 @@ Open `http://localhost:3000`. Unauthenticated users are redirected to `/login`.
 ## Tenant isolation
 
 - Every customer, order, partner, invoice, reminder, and inventory item is scoped to `business_id` and protected by RLS.
-- Order-only data (payments, measurements, and photos) inherits tenant ownership through its order instead of duplicating `business_id`.
+- Order payments, per-order measurement snapshots, and photos inherit tenant ownership through their order. Customer measurement profiles are stored with the customer and are scoped by the customer's `business_id`.
 - Cross-root links use composite foreign keys. An order cannot reference another business's customer, and an order cost cannot reference another business's partner.
 - `src/lib/auth/tenant.ts` is the only server-side tenant resolver. New server actions and route handlers must call `requireTenant()` and derive their `businessId` from its return value, never request input.
 

@@ -45,6 +45,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [showAllOrdersModal, setShowAllOrdersModal] = useState(false);
   const [modalSearchQuery, setModalSearchQuery] = useState('');
   const [modalStatusFilter, setModalStatusFilter] = useState('All');
+  const completedStatus = shopProfile.statuses.at(-1);
 
   // Dynamically calculate metrics based on real orders
   const totalRevenue = orders.reduce((acc, o) => acc + (o.price || 0), 0);
@@ -59,7 +60,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const netProfit = totalRevenue - totalCosts;
 
   const pendingPaymentOrders = orders.filter(
-    (o) => o.price > o.paid && o.status !== 'Completed'
+    (o) => o.price > o.paid && o.status !== completedStatus
   );
 
   const upcomingInvoices = invoices.filter((inv) => inv.status !== 'Paid');
@@ -92,23 +93,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'Ready':
-      case 'Completed':
-        return 'bg-emerald-200 text-emerald-900 border-emerald-300';
-      case 'Ready for Fitting':
-        return 'bg-gray-200 text-gray-900 border-gray-300';
-      case 'In Progress':
-      case 'In Cutting':
-        return 'bg-amber-200 text-amber-900 border-amber-300';
-      case 'First Fitting':
-        return 'bg-violet-200 text-violet-900 border-violet-300';
-      case 'Measurements Taken':
-        return 'bg-sky-200 text-sky-900 border-sky-300';
-      case 'Confirmed':
-      default:
-        return 'bg-gray-200 text-gray-900 border-gray-300';
+    const index = shopProfile.statuses.indexOf(status);
+    if (index === shopProfile.statuses.length - 1) {
+      return 'bg-emerald-200 text-emerald-900 border-emerald-300';
     }
+    if (index === shopProfile.statuses.length - 2) return 'bg-green-200 text-green-900 border-green-300';
+    return 'bg-gray-200 text-gray-900 border-gray-300';
   };
 
   return (
@@ -313,9 +303,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {/* Right Side: Status Badge & Due Date */}
                 <div className="text-right shrink-0 flex flex-col items-end gap-1">
                   <span
-                    className={`text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded border whitespace-nowrap ${getStatusBadgeClass(
-                      order.status
-                    )}`}
+                    className={`text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded border whitespace-nowrap ${getStatusBadgeClass(order.status)}`}
                   >
                     {order.status}
                   </span>
@@ -441,7 +429,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
 
               <div className="flex gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 hide-scrollbar">
-                {['All', 'Confirmed', 'In Progress', 'In Cutting', 'Ready', 'Completed', 'Unpaid'].map((tab) => (
+                {['All', ...shopProfile.statuses, 'Unpaid'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setModalStatusFilter(tab)}
@@ -493,7 +481,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </p>
                       <div className="flex items-center gap-2">
                         <span
-                              className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${getStatusBadgeClass(order.status)}`}
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${getStatusBadgeClass(order.status)}`}
                         >
                           {order.status}
                         </span>
