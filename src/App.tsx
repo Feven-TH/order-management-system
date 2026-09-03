@@ -674,6 +674,12 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
               setShopProfile(updated);
               void persistWorkspaceChange('save_profile', updated);
             }}
+            onSaveConfigurations={async (config) => {
+              const saved = await persistWorkspaceChange('save_configurations', config);
+              if (!saved) return false;
+              setShopProfile((current) => ({ ...current, ...config }));
+              return true;
+            }}
             onSignOut={() => {
               window.location.href = '/logout';
             }}

@@ -19,6 +19,7 @@ type WorkspaceAction =
   | 'delete_reminder'
   | 'save_inventory'
   | 'save_profile'
+  | 'save_configurations'
   | 'settle_invoice'
   | 'settle_partner_balance';
 
@@ -509,6 +510,23 @@ export async function POST(request: Request) {
           }).eq('business_id', tenant.businessId);
           if (themeError) throw themeError;
         }
+        break;
+      }
+      case 'save_configurations': {
+        const statuses = Array.isArray(payload.statuses)
+          ? payload.statuses.filter((status): status is string => typeof status === 'string' && Boolean(status.trim()))
+          : [];
+        const measurementFields = Array.isArray(payload.measurementFields)
+          ? payload.measurementFields.filter((field): field is string => typeof field === 'string' && Boolean(field.trim()))
+          : [];
+        if (!statuses.length) {
+          return NextResponse.json({ error: 'At least one workflow stage is required' }, { status: 400 });
+        }
+        const { error } = await supabase.from('businesses').update({
+          order_statuses: statuses,
+          measurement_fields: measurementFields,
+        }).eq('id', tenant.businessId);
+        if (error) throw error;
         break;
       }
       case 'settle_invoice': {

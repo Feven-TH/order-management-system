@@ -32,6 +32,7 @@ import {
 interface SettingsViewProps {
   shopProfile: ShopProfile;
   onUpdateProfile: (updated: ShopProfile) => void;
+  onSaveConfigurations: (config: Pick<ShopProfile, 'statuses' | 'measurementFields'>) => Promise<boolean>;
   onSignOut: () => void;
   onExportExcel?: () => void;
 }
@@ -39,21 +40,27 @@ interface SettingsViewProps {
 export const SettingsView: React.FC<SettingsViewProps> = ({
   shopProfile,
   onUpdateProfile,
+  onSaveConfigurations,
   onSignOut,
   onExportExcel,
 }) => {
   const [profileDraft, setProfileDraft] = useState<ShopProfile>(shopProfile);
+  const [workflowDraft, setWorkflowDraft] = useState<string[]>(shopProfile.statuses);
+  const [measurementFieldsDraft, setMeasurementFieldsDraft] = useState<string[]>(shopProfile.measurementFields);
   const [newStatusName, setNewStatusName] = useState('');
   const [newMeasurementField, setNewMeasurementField] = useState('');
   const [editingMeasurementField, setEditingMeasurementField] = useState<string | null>(null);
   const [measurementFieldDraft, setMeasurementFieldDraft] = useState('');
   const [savedToast, setSavedToast] = useState(false);
+  const [configurationNotice, setConfigurationNotice] = useState<string | null>(null);
+  const [isSavingConfigurations, setIsSavingConfigurations] = useState(false);
   const [accountNotice, setAccountNotice] = useState<string | null>(null);
   const [isAnalyzingLogo, setIsAnalyzingLogo] = useState(false);
 
   useEffect(() => {
-    setProfileDraft(shopProfile);
-  }, [shopProfile]);
+    setWorkflowDraft(shopProfile.statuses);
+    setMeasurementFieldsDraft(shopProfile.measurementFields);
+  }, [shopProfile.statuses, shopProfile.measurementFields]);
 
   const availableMetrics = [
     'Total Revenue (MTD)',
@@ -64,11 +71,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     'Fabric Wastage Rate',
   ];
 
+  const withSavedConfigurations = (profile: ShopProfile): ShopProfile => ({
+    ...profile,
+    statuses: shopProfile.statuses,
+    measurementFields: shopProfile.measurementFields,
+  });
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateProfile(profileDraft);
-    if (profileDraft.businessTheme) {
-      applyThemeToDocument(profileDraft.businessTheme, profileDraft.theme === 'dark');
+    const updatedProfile = withSavedConfigurations(profileDraft);
+    setProfileDraft(updatedProfile);
+    onUpdateProfile(updatedProfile);
+    if (updatedProfile.businessTheme) {
+      applyThemeToDocument(updatedProfile.businessTheme, updatedProfile.theme === 'dark');
     }
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 2500);
@@ -90,9 +105,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             brandAccent: newTheme.primaryColor,
             businessTheme: newTheme,
           };
-          setProfileDraft(updated);
+          const profileToSave = withSavedConfigurations(updated);
+          setProfileDraft(profileToSave);
           applyThemeToDocument(newTheme, profileDraft.theme === 'dark');
-          onUpdateProfile(updated);
+          onUpdateProfile(profileToSave);
         } catch (err) {
           console.error(err);
         } finally {
@@ -114,9 +130,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         brandAccent: newTheme.primaryColor,
         businessTheme: newTheme,
       };
-      setProfileDraft(updated);
+      const profileToSave = withSavedConfigurations(updated);
+      setProfileDraft(profileToSave);
       applyThemeToDocument(newTheme, profileDraft.theme === 'dark');
-      onUpdateProfile(updated);
+      onUpdateProfile(profileToSave);
     } catch (err) {
       console.error(err);
     } finally {
@@ -126,31 +143,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleAddStatus = () => {
     const status = newStatusName.trim();
-    if (!status || profileDraft.statuses.some((item) => item.toLowerCase() === status.toLowerCase())) return;
-    setProfileDraft({
-      ...profileDraft,
-      statuses: [...profileDraft.statuses, status],
-    });
+    if (!status || workflowDraft.some((item) => item.toLowerCase() === status.toLowerCase())) return;
+    setWorkflowDraft((stages) => [...stages, status]);
     setNewStatusName('');
   };
 
   const handleDeleteStatus = (index: number) => {
-    if (profileDraft.statuses.length === 1) return;
-    setProfileDraft({
-      ...profileDraft,
-      statuses: profileDraft.statuses.filter((_, idx) => idx !== index),
-    });
+    if (workflowDraft.length === 1) return;
+    setWorkflowDraft((stages) => stages.filter((_, idx) => idx !== index));
   };
 
   const handleAddMeasurementField = () => {
     const field = newMeasurementField.trim().toLowerCase().replace(/\s+/g, '_');
-    if (!field || profileDraft.measurementFields.includes(field)) return;
-    setProfileDraft({ ...profileDraft, measurementFields: [...profileDraft.measurementFields, field] });
+    if (!field || measurementFieldsDraft.includes(field)) return;
+    setMeasurementFieldsDraft((fields) => [...fields, field]);
     setNewMeasurementField('');
   };
 
   const handleDeleteMeasurementField = (field: string) => {
-    setProfileDraft({ ...profileDraft, measurementFields: profileDraft.measurementFields.filter((item) => item !== field) });
+    setMeasurementFieldsDraft((fields) => fields.filter((item) => item !== field));
     if (editingMeasurementField === field) setEditingMeasurementField(null);
   };
 
@@ -160,12 +171,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setEditingMeasurementField(null);
       return;
     }
-    if (profileDraft.measurementFields.some((item) => item !== field && item === updatedField)) return;
-    setProfileDraft({
-      ...profileDraft,
-      measurementFields: profileDraft.measurementFields.map((item) => item === field ? updatedField : item),
-    });
+    if (measurementFieldsDraft.some((item) => item !== field && item === updatedField)) return;
+    setMeasurementFieldsDraft((fields) => fields.map((item) => item === field ? updatedField : item));
     setEditingMeasurementField(null);
+  };
+
+  const configurationsAreDirty =
+    workflowDraft.join('\u0000') !== shopProfile.statuses.join('\u0000') ||
+    measurementFieldsDraft.join('\u0000') !== shopProfile.measurementFields.join('\u0000');
+
+  const handleSaveConfigurations = async () => {
+    setConfigurationNotice(null);
+    setIsSavingConfigurations(true);
+    const saved = await onSaveConfigurations({
+      statuses: workflowDraft,
+      measurementFields: measurementFieldsDraft,
+    });
+    setIsSavingConfigurations(false);
+    setConfigurationNotice(saved ? 'Workflow and measurement fields saved.' : 'Could not save configurations. Please try again.');
+  };
+
+  const handleDiscardConfigurationChanges = () => {
+    setWorkflowDraft(shopProfile.statuses);
+    setMeasurementFieldsDraft(shopProfile.measurementFields);
+    setNewStatusName('');
+    setNewMeasurementField('');
+    setEditingMeasurementField(null);
+    setConfigurationNotice(null);
   };
 
   const handleToggleMetric = (metric: string) => {
@@ -194,6 +226,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {savedToast && (
         <div className="p-3 bg-green-100 text-green-900 text-xs font-bold rounded-lg border border-green-300 flex items-center gap-2 shadow-sm animate-fadeIn">
           <Check className="w-4 h-4" /> Workshop profile and settings saved successfully!
+        </div>
+      )}
+
+      {configurationNotice && (
+        <div role="status" className={`p-3 text-xs font-bold rounded-lg border flex items-center gap-2 shadow-sm animate-fadeIn ${configurationNotice.startsWith('Could not') ? 'bg-red-100 text-red-900 border-red-300' : 'bg-green-100 text-green-900 border-green-300'}`}>
+          <Check className="w-4 h-4" /> {configurationNotice}
         </div>
       )}
 
@@ -298,7 +336,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const updated = { ...profileDraft, theme: 'dark' as const };
+                      const updated = withSavedConfigurations({ ...profileDraft, theme: 'dark' as const });
                       setProfileDraft(updated);
                       if (updated.businessTheme) {
                         applyThemeToDocument(updated.businessTheme, true);
@@ -318,7 +356,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const updated = { ...profileDraft, theme: 'light' as const };
+                      const updated = withSavedConfigurations({ ...profileDraft, theme: 'light' as const });
                       setProfileDraft(updated);
                       if (updated.businessTheme) {
                         applyThemeToDocument(updated.businessTheme, false);
@@ -362,7 +400,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </p>
 
         <div className="space-y-2">
-          {profileDraft.statuses.map((status, index) => (
+          {workflowDraft.map((status, index) => (
             <div
               key={index}
               className="flex items-center justify-between p-3 bg-[#fff8f4] dark:bg-[#1a120c] rounded-lg border border-[#d7c3b2]/20"
@@ -378,9 +416,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleDeleteStatus(index)}
-                disabled={profileDraft.statuses.length === 1}
+                disabled={workflowDraft.length === 1}
                 className="p-1 text-[#847466] hover:text-[#ba1a1a] transition-colors"
-                title={profileDraft.statuses.length === 1 ? 'At least one stage is required' : 'Remove stage'}
+                title={workflowDraft.length === 1 ? 'At least one stage is required' : 'Remove stage'}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -412,7 +450,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </h2>
         <p className="text-xs text-[#524438] dark:text-[#d7c3b2]">These fields appear on every new order. Add, rename, or remove fields as your workshop needs; existing order values are retained.</p>
         <div className="flex flex-wrap gap-2">
-          {profileDraft.measurementFields.map((field) => (
+          {measurementFieldsDraft.map((field) => (
             <span key={field} className="inline-flex items-center gap-1 rounded-lg bg-[#fff8f4] dark:bg-[#1a120c] px-2.5 py-1.5 text-xs font-semibold text-[#524438] dark:text-[#d7c3b2] border border-[#d7c3b2]/20">
               {editingMeasurementField === field ? (
                 <input
@@ -459,6 +497,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           />
           <button type="button" onClick={handleAddMeasurementField} className="px-4 py-2 bg-[#885000] text-white text-xs font-bold rounded-lg hover:bg-[#a6681c] flex items-center gap-1">
             <Plus className="w-4 h-4" /> Add Field
+          </button>
+        </div>
+      </div>
+
+      <div className="sticky bottom-4 z-10 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-[#d7c3b2]/40 dark:border-[#524438] bg-white/95 dark:bg-[#241a13]/95 p-4 shadow-lg backdrop-blur">
+        <p className="text-xs text-[#524438] dark:text-[#d7c3b2]">
+          {configurationsAreDirty ? 'You have unsaved workflow or measurement changes.' : 'All workflow and measurement changes are saved.'}
+        </p>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <button
+            type="button"
+            onClick={handleDiscardConfigurationChanges}
+            disabled={!configurationsAreDirty || isSavingConfigurations}
+            className="px-3 py-2 text-xs font-bold text-[#524438] dark:text-[#d7c3b2] disabled:opacity-50"
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveConfigurations}
+            disabled={!configurationsAreDirty || isSavingConfigurations}
+            className="px-4 py-2 bg-[#885000] hover:bg-[#a6681c] text-white text-xs font-bold rounded-lg disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-1.5"
+          >
+            <Save className="w-4 h-4" /> {isSavingConfigurations ? 'Saving…' : 'Save Configurations'}
           </button>
         </div>
       </div>
