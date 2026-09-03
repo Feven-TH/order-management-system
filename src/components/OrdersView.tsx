@@ -201,6 +201,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
     return result;
   }, [orders, searchQuery, statusFilter, paymentFilter, urgencyFilter, sortBy]);
 
+  const ordersByDueDate = useMemo(() => {
+    return [...filteredAndSortedOrders].sort((a, b) => {
+      const aDueDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      const bDueDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      return aDueDate - bDueDate;
+    });
+  }, [filteredAndSortedOrders]);
+
   // Key Metric Aggregations
   const stats = useMemo(() => {
     const totalCount = orders.length;
@@ -228,7 +236,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
   // Export orders list to Excel
   const handleExportOrdersExcel = () => {
-    const exportData = filteredAndSortedOrders.map((o) => ({
+    const exportData = ordersByDueDate.map((o) => ({
       'Order #': o.orderNumber,
       'Customer Name': o.customerName,
       'Phone': o.customerPhone,
@@ -258,22 +266,27 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
   const getStatusBadgeClass = (status: OrderStatus) => {
     switch (status) {
       case 'Completed':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800';
+        return 'bg-emerald-200 text-emerald-900 border-emerald-300';
       case 'Ready':
-        return 'bg-green-100 text-green-900 border-green-300 dark:bg-green-950/50 dark:text-green-200 dark:border-green-700 font-bold';
+        return 'bg-emerald-200 text-emerald-900 border-emerald-300';
       case 'Ready for Fitting':
+        return 'bg-gray-200 text-gray-900 border-gray-300';
       case 'First Fitting':
-        return 'bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800';
+        return 'bg-violet-200 text-violet-900 border-violet-300';
       case 'In Cutting':
-        return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800';
+        return 'bg-amber-200 text-amber-900 border-amber-300';
       case 'In Progress':
-        return 'bg-[#fdbd72]/30 text-[#784a05] border-[#fdbd72] dark:bg-[#a6681c]/30 dark:text-[#ffb86d] dark:border-[#a6681c]';
+        return 'bg-amber-200 text-amber-900 border-amber-300';
       case 'Measurements Taken':
-        return 'bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800';
+        return 'bg-sky-200 text-sky-900 border-sky-300';
       case 'Confirmed':
       default:
-        return 'bg-[#ede0d6] text-[#524438] border-[#d7c3b2] dark:bg-[#33261c] dark:text-[#d7c3b2] dark:border-[#524438]';
+        return 'bg-gray-200 text-gray-900 border-gray-300';
     }
+  };
+
+  const getDueDateClass = (dueDateStr: string) => {
+    return getDueUrgency(dueDateStr).type === 'overdue' ? 'text-red-400' : 'text-gray-400';
   };
 
   // Payment Badge Helper
@@ -310,7 +323,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
               Bespoke Garment Orders
             </h1>
             <span className="text-xs font-mono font-bold bg-[#ede0d6] dark:bg-[#33261c] text-[#784a05] dark:text-[#ffb86d] px-2.5 py-0.5 rounded-full">
-              {filteredAndSortedOrders.length} {filteredAndSortedOrders.length === 1 ? 'Garment' : 'Garments'}
+              {ordersByDueDate.length} {ordersByDueDate.length === 1 ? 'Garment' : 'Garments'}
             </span>
           </div>
           <p className="text-sm text-[#524438] dark:text-[#d7c3b2] mt-0.5">
@@ -583,7 +596,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       </section>
 
       {/* Orders List View (Grid Cards vs Table) */}
-      {filteredAndSortedOrders.length === 0 ? (
+              {ordersByDueDate.length === 0 ? (
         <div className="bg-white dark:bg-[#241a13] border border-dashed border-[#d7c3b2]/40 dark:border-[#524438] rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3 shadow-2xs">
           <div className="w-14 h-14 rounded-full bg-[#fff1e7] dark:bg-[#33261c] flex items-center justify-center text-[#885000]">
             <Shirt className="w-7 h-7" />
@@ -621,7 +634,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
       ) : viewMode === 'grid' ? (
         /* GRID CARDS VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredAndSortedOrders.map((order) => {
+          {ordersByDueDate.map((order) => {
             const urgency = getDueUrgency(order.dueDate);
             const balance = Math.max(0, order.price - order.paid);
             const paymentPercent = Math.min(100, Math.round((order.paid / (order.price || 1)) * 100));
@@ -629,7 +642,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
             return (
               <article
                 key={order.id}
-                className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-2xl p-5 flex flex-col justify-between hover:shadow-[0px_6px_24px_rgba(38,15,1,0.08)] cursor-pointer transition-all hover:border-[#a6681c]/60 group relative overflow-hidden"
+                className="bg-white dark:bg-[#241a13] border border-[#d7c3b2]/30 dark:border-[#524438] rounded-2xl p-5 flex flex-col justify-between hover:shadow-[0px_6px_24px_rgba(38,15,1,0.08)] cursor-pointer transition-all hover:border-[#a6681c]/60 hover:bg-[#a6681c]/5 group relative overflow-hidden"
                 onClick={() => onSelectOrder(order)}
               >
                 {/* Top urgency strip if overdue */}
@@ -681,7 +694,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   <div className="mt-3.5 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/25 dark:border-[#524438] rounded-xl p-3 flex items-center justify-between">
                     <div className="min-w-0">
                       <p className="text-[11px] text-[#847466] dark:text-[#a08e80] flex items-center gap-1 font-medium">
-                        <Calendar className="w-3.5 h-3.5 text-[#885000]" /> Due: {order.dueDate}
+                        <Calendar className="w-3.5 h-3.5 text-[#885000]" /> Due:{' '}
+                        <span className={getDueDateClass(order.dueDate)}>{order.dueDate}</span>
                       </p>
                       {order.notes && (
                         <p className="text-[11px] text-[#524438] dark:text-[#d7c3b2] truncate mt-0.5 max-w-[180px]">
@@ -728,7 +742,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                             context: `${order.itemType} for ${order.customerName}`,
                           });
                         }}
-                        className="p-1.5 text-[#524438] dark:text-[#d7c3b2] hover:text-[#a6681c] hover:bg-[#ede0d6]/60 rounded-lg transition-colors"
+                        className="p-1.5 text-[#524438] dark:text-[#d7c3b2] hover:text-[#a6681c] hover:bg-[#a6681c]/10 rounded-lg transition-colors"
                         title="Send SMS / WhatsApp update"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
@@ -737,7 +751,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     <a
                       href={`tel:${order.customerPhone}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="p-1.5 text-[#524438] dark:text-[#d7c3b2] hover:text-[#a6681c] hover:bg-[#ede0d6]/60 rounded-lg transition-colors"
+                      className="p-1.5 text-[#524438] dark:text-[#d7c3b2] hover:text-[#a6681c] hover:bg-[#a6681c]/10 rounded-lg transition-colors"
                       title="Call Client"
                     >
                       <Phone className="w-3.5 h-3.5" />
@@ -770,7 +784,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#d7c3b2]/15 dark:divide-[#524438]/30 text-xs text-[#211a15] dark:text-white">
-                {filteredAndSortedOrders.map((order) => {
+                {ordersByDueDate.map((order) => {
                   const urgency = getDueUrgency(order.dueDate);
                   const balance = Math.max(0, order.price - order.paid);
 
@@ -778,7 +792,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                     <tr
                       key={order.id}
                       onClick={() => onSelectOrder(order)}
-                      className="hover:bg-[#fff1e7]/50 dark:hover:bg-[#33261c]/60 cursor-pointer transition-colors"
+                      className="hover:bg-[#a6681c]/5 dark:hover:bg-[#33261c]/60 cursor-pointer transition-colors"
                     >
                       {/* Customer */}
                       <td className="py-3.5 px-4">
@@ -807,7 +821,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
 
                       {/* Due Date */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-medium">{order.dueDate}</div>
+                        <div className="font-medium">
+                          <span className={getDueDateClass(order.dueDate)}>{order.dueDate}</span>
+                        </div>
                         {urgency.type === 'overdue' && (
                           <span className="text-[10px] text-rose-500 font-bold">
                             ⚠️ Overdue

@@ -246,85 +246,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             </button>
           </div>
 
-          {/* Desktop Top Quick Links */}
-          <nav className="hidden lg:flex items-center gap-5">
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className={`text-sm font-semibold transition-colors px-2 py-1 rounded ${
-                currentView === 'dashboard'
-                  ? 'text-[#885000] dark:text-[#ffb86d] border-b-2 border-[#885000]'
-                  : 'text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => onNavigate('orders')}
-              className={`text-sm font-semibold transition-colors px-2 py-1 rounded ${
-                currentView === 'orders' || currentView === 'order_details'
-                  ? 'text-[#885000] dark:text-[#ffb86d] border-b-2 border-[#885000]'
-                  : 'text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]'
-              }`}
-            >
-              Orders
-            </button>
-            <button
-              onClick={() => onNavigate('customers')}
-              className={`text-sm font-semibold transition-colors px-2 py-1 rounded ${
-                currentView === 'customers'
-                  ? 'text-[#885000] dark:text-[#ffb86d] border-b-2 border-[#885000]'
-                  : 'text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]'
-              }`}
-            >
-              Customers
-            </button>
-            <button
-              onClick={() => onNavigate('reminders')}
-              className={`text-sm font-semibold transition-colors px-2 py-1 rounded relative ${
-                currentView === 'reminders'
-                  ? 'text-[#885000] dark:text-[#ffb86d] border-b-2 border-[#885000]'
-                  : 'text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]'
-              }`}
-            >
-              Reminders
-              {unreadRemindersCount > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.2 bg-rose-400 text-white text-[10px] rounded-full font-bold">
-                  {unreadRemindersCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => onNavigate('inventory')}
-              className={`text-sm font-semibold transition-colors px-2 py-1 rounded ${
-                currentView === 'inventory'
-                  ? 'text-[#885000] dark:text-[#ffb86d] border-b-2 border-[#885000]'
-                  : 'text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]'
-              }`}
-            >
-              Inventory
-            </button>
-            <button
-              onClick={() => onNavigate('partners')}
-              className={`text-sm font-semibold transition-colors px-2 py-1 rounded ${
-                currentView === 'partners'
-                  ? 'text-[#885000] dark:text-[#ffb86d] border-b-2 border-[#885000]'
-                  : 'text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]'
-              }`}
-            >
-              Partners
-            </button>
-            <button
-              onClick={() => onNavigate('finances')}
-              className={`text-sm font-semibold transition-colors px-2 py-1 rounded ${
-                currentView === 'finances'
-                  ? 'text-[#885000] dark:text-[#ffb86d] border-b-2 border-[#885000]'
-                  : 'text-[#524438] dark:text-[#d7c3b2] hover:text-[#885000]'
-              }`}
-            >
-              Finances
-            </button>
-          </nav>
-
+          
           <div className="flex items-center gap-2 md:gap-3">
             {onToggleTheme && (
               <button
@@ -442,7 +364,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             </ul>
 
             {/* Drawer Footer */}
-            <div className="p-4 border-t border-[#d7c3b2]/20 space-y-2 bg-[#fff1e7]/40 dark:bg-[#150f0b]">
+            <div className="p-4 border-t border-[#d7c3b2]/20 space-y-2">
               {canManageAdmins && onOpenAdmins && (
                 <button
                   onClick={() => {
@@ -494,7 +416,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       )}
 
       {/* Mobile Bottom Navigation Bar - 4 Primary Requested Sections */}
-      <nav className="fixed bottom-0 left-0 w-full z-40 grid grid-cols-4 px-2 py-2 md:hidden bg-[#fff8f4]/95 dark:bg-[#150f0b]/95 border-t border-[#d7c3b2]/30 shadow-lg pb-safe backdrop-blur-md">
+      <nav className="fixed bottom-0 left-0 w-full z-40 grid grid-cols-4 px-2 py-2 md:hidden bg-white dark:bg-[#150f0b] border-t border-[#d7c3b2]/30 dark:border-[#524438] shadow-lg pb-safe">
         <button
           onClick={() => onNavigate('dashboard')}
           className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${

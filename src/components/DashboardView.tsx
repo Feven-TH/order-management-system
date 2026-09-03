@@ -91,6 +91,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Ready':
+      case 'Completed':
+        return 'bg-emerald-200 text-emerald-900 border-emerald-300';
+      case 'Ready for Fitting':
+        return 'bg-gray-200 text-gray-900 border-gray-300';
+      case 'In Progress':
+      case 'In Cutting':
+        return 'bg-amber-200 text-amber-900 border-amber-300';
+      case 'First Fitting':
+        return 'bg-violet-200 text-violet-900 border-violet-300';
+      case 'Measurements Taken':
+        return 'bg-sky-200 text-sky-900 border-sky-300';
+      case 'Confirmed':
+      default:
+        return 'bg-gray-200 text-gray-900 border-gray-300';
+    }
+  };
+
   return (
     <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-6 md:py-8 space-y-6 md:space-y-8 animate-fadeIn pb-16">
       {/* Page Title & Quick Actions */}
@@ -108,7 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {onExportExcel && (
             <button
               onClick={onExportExcel}
-              className="flex-1 sm:flex-initial bg-[#15803d] hover:bg-[#166534] dark:bg-[#166534] dark:hover:bg-[#15803d] text-white font-headline font-semibold text-xs sm:text-sm py-2.5 px-3.5 rounded-xl shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shrink-0 border border-[#166534]"
+              className="w-auto flex-none bg-[#15803d] hover:bg-[#166534] dark:bg-[#166534] dark:hover:bg-[#15803d] text-white font-headline font-semibold text-xs sm:text-sm py-2.5 px-3.5 rounded-xl shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shrink-0 border border-[#166534]"
               title="Export all records as Microsoft Excel spreadsheet (.xlsx)"
             >
               <FileSpreadsheet className="w-4 h-4 text-white" />
@@ -118,7 +138,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={onOpenNewOrder}
-            className="flex-1 sm:flex-initial bg-[#a6681c] hover:bg-[#885000] text-white py-2.5 px-4 rounded-xl font-headline font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shrink-0"
+            className="w-auto flex-none bg-[#a6681c] hover:bg-[#885000] text-white py-2.5 px-4 rounded-xl font-headline font-bold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>New Order</span>
@@ -157,10 +177,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Total Costs Card */}
         <div className="bg-white dark:bg-[#241a13] p-5 sm:p-6 rounded-xl border border-[#d7c3b2]/20 dark:border-[#524438] shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 border border-rose-200/50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-[#fff8f4] dark:bg-rose-950/40 text-[#524438] dark:text-rose-400 border border-[#d7c3b2]/40 dark:border-rose-900/40 flex items-center justify-center">
               <TrendingDown className="w-5 h-5" />
             </div>
-            <span className="text-xs font-semibold text-[#845411] bg-[#fdbd72]/20 px-2 py-0.5 rounded">
+            <span className="text-xs font-semibold text-[#845411] bg-[#fff1e7] border border-[#fdbd72]/40 px-2 py-0.5 rounded">
               Controlled
             </span>
           </div>
@@ -183,10 +203,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Net Profit Card */}
         <div className="bg-white dark:bg-[#241a13] p-5 sm:p-6 rounded-xl border-2 border-[#a6681c]/40 shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-4 relative z-10">
-            <div className="w-10 h-10 rounded-full bg-[#fdbd72] text-[#784a05] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-[#fff8f4] text-[#885000] border border-[#d7c3b2]/40 flex items-center justify-center">
               <TrendingUp className="w-5 h-5" />
             </div>
-            <span className="px-2.5 py-0.5 bg-[#fff1e7] text-[#885000] rounded-full text-xs font-bold border border-[#a6681c]/20">
+            <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-900 rounded-full text-xs font-bold border border-emerald-300">
               Healthy
             </span>
           </div>
@@ -194,9 +214,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <p className="text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
               Net Profit
             </p>
-            <p className="font-headline text-2xl sm:text-3xl md:text-4xl font-bold text-[#885000] dark:text-[#ffb86d] mt-1">
+            <p className="font-headline text-2xl sm:text-3xl md:text-4xl font-bold text-[#211a15] dark:text-[#ffb86d] mt-1">
               {netProfit.toLocaleString()}{' '}
-              <span className="text-base sm:text-lg font-medium text-[#885000]/70 dark:text-[#ffb86d]/70">
+              <span className="text-base sm:text-lg font-medium text-[#524438] dark:text-[#ffb86d]/70">
                 {shopProfile.currency}
               </span>
             </p>
@@ -211,7 +231,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Outstanding Customer Payments Alert */}
         <div className="bg-[#fff1e7] dark:bg-[#2a2018] p-4 md:p-5 rounded-xl border border-[#d7c3b2]/30 flex items-start gap-3.5 shadow-sm">
-          <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-500 dark:text-rose-400 border border-rose-200/50 shrink-0 mt-0.5">
+          <div className="p-2 rounded-lg bg-[#fff8f4] dark:bg-rose-950/60 text-rose-500 dark:text-rose-400 border border-[#d7c3b2]/40 dark:border-rose-900/40 shrink-0 mt-0.5">
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
@@ -223,7 +243,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </p>
             <button
               onClick={() => openOrdersModalWithFilter('Unpaid')}
-              className="mt-2 text-xs md:text-sm font-bold text-[#885000] dark:text-[#ffb86d] hover:underline flex items-center gap-1"
+              className="mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs md:text-sm font-bold text-[#885000] dark:text-[#ffb86d] hover:text-[#a6681c] hover:bg-[#a6681c]/10 transition-colors"
             >
               Review Outstanding Orders <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -232,7 +252,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Costs Outstanding Alert */}
         <div className="bg-[#fff1e7] dark:bg-[#2a2018] p-4 md:p-5 rounded-xl border border-[#d7c3b2]/30 flex items-start gap-3.5 shadow-sm">
-          <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-950 text-[#845411] dark:text-[#fdbd72] shrink-0 mt-0.5">
+          <div className="p-2 rounded-lg bg-[#fff8f4] dark:bg-amber-950 text-[#845411] dark:text-[#fdbd72] border border-[#d7c3b2]/40 dark:border-amber-900/40 shrink-0 mt-0.5">
             <Info className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
@@ -244,7 +264,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </p>
             <button
               onClick={onNavigateToPartners}
-              className="mt-2 text-xs md:text-sm font-bold text-[#885000] dark:text-[#ffb86d] hover:underline flex items-center gap-1"
+              className="mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs md:text-sm font-bold text-[#885000] dark:text-[#ffb86d] hover:text-[#a6681c] hover:bg-[#a6681c]/10 transition-colors"
             >
               Manage Payables <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -293,13 +313,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {/* Right Side: Status Badge & Due Date */}
                 <div className="text-right shrink-0 flex flex-col items-end gap-1">
                   <span
-                    className={`text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded border whitespace-nowrap ${
-                      order.status === 'Ready' || order.status === 'Completed'
-                        ? 'bg-green-100 text-green-900 border-green-300'
-                        : order.status === 'In Progress' || order.status === 'In Cutting'
-                        ? 'bg-[#fdbd72]/30 text-[#784a05] border-[#fdbd72]'
-                        : 'bg-[#ede0d6] text-[#524438] border-[#d7c3b2]'
-                    }`}
+                    className={`text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded border whitespace-nowrap ${getStatusBadgeClass(
+                      order.status
+                    )}`}
                   >
                     {order.status}
                   </span>
@@ -386,7 +402,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Embedded All Orders Modal (Clean, Instant, No Separate Screen) */}
       {showAllOrdersModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#150f0b]/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-[#fff8f4] dark:bg-[#1f1610] text-[#211a15] dark:text-[#f7ebe1] rounded-2xl border border-[#d7c3b2]/30 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="px-5 py-4 border-b border-[#d7c3b2]/20 flex justify-between items-center bg-white dark:bg-[#241a13]">
@@ -477,13 +493,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </p>
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                            order.status === 'Ready' || order.status === 'Completed'
-                              ? 'bg-green-100 text-green-900 border-green-300'
-                              : order.status === 'In Progress' || order.status === 'In Cutting'
-                              ? 'bg-[#fdbd72]/30 text-[#784a05] border-[#fdbd72]'
-                              : 'bg-[#ede0d6] text-[#524438] border-[#d7c3b2]'
-                          }`}
+                              className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${getStatusBadgeClass(order.status)}`}
                         >
                           {order.status}
                         </span>
