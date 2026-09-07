@@ -5,7 +5,7 @@ Next.js multi-tenant workspace for AtelierOS order management.
 ## Stack
 
 - Next.js App Router for frontend and server routes
-- Supabase Auth for business sign-in and signup
+- Supabase Auth for admin-provisioned business sign-in
 - Supabase Postgres with business-scoped tenant isolation
 - Tailwind CSS for styling
 
@@ -49,12 +49,17 @@ Use the Supabase SQL editor or Supabase CLI to run:
 - `supabase/migrations/202608280002_partner_payments.sql`
 - `supabase/migrations/202608280003_set_user_password.sql`
 
-5. Create a business account.
+5. Provision the first business account.
 
-Open `/signup`. Creating an Auth user atomically creates its `businesses`,
-`business_members` (with the `owner` role), and default `business_themes` rows.
-The tenant is then resolved from the authenticated user on the server; the
-browser never chooses a business ID.
+Create a superadmin Auth user and matching `admin_profiles` record as described
+in [TENANCY.md](TENANCY.md). Sign in as that superadmin and use `/admins` to
+create tenant owners. Public signup is intentionally unavailable. Each
+provisioned owner must replace the temporary password before opening the
+workspace.
+
+Before deploying, open **Supabase Dashboard → Authentication → General
+Configuration** and disable **Allow new users to sign up**. This prevents direct
+Auth API registration outside the superadmin provisioning screen.
 
 6. Configure Supabase Auth URLs.
 
@@ -82,7 +87,7 @@ Open `http://localhost:3000`. Unauthenticated users are redirected to `/login`.
 - Cross-root links use composite foreign keys. An order cannot reference another business's customer, and an order cost cannot reference another business's partner.
 - `src/lib/auth/tenant.ts` is the only server-side tenant resolver. New server actions and route handlers must call `requireTenant()` and derive their `businessId` from its return value, never request input.
 
-For superadmin provisioning, tenant-owner signup, and the isolation design, see
+For superadmin provisioning and the isolation design, see
 [TENANCY.md](TENANCY.md).
 
 ## Scripts

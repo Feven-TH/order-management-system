@@ -12,6 +12,7 @@ export default async function HomePage() {
     <App
       businessName={tenant.businessName}
       userEmail={tenant.email}
+      mustChangePassword={tenant.mustChangePassword}
       canManageAdmins={platformAdmin?.role === 'superadmin'}
     />
   );

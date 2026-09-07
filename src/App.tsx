@@ -47,11 +47,15 @@ import {
 type AppProps = {
   businessName: string;
   userEmail: string;
+  mustChangePassword: boolean;
   canManageAdmins: boolean;
 };
 
-export default function App({ businessName, userEmail, canManageAdmins }: AppProps) {
+export default function App({ businessName, userEmail, mustChangePassword, canManageAdmins }: AppProps) {
   // Navigation & View State
+  // This is the app-wide authenticated profile state. The server guard keeps a
+  // forced-reset account from mounting this workspace in the first place.
+  const [authState] = useState({ mustChangePassword });
   const [currentView, setCurrentView] = useState<ActiveView>('dashboard');
   const [previousView, setPreviousView] = useState<ActiveView>('dashboard');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -487,6 +491,10 @@ export default function App({ businessName, userEmail, canManageAdmins }: AppPro
   const activeOrdersCount = orders.filter(
     (o) => o.status !== shopProfile.statuses.at(-1) && o.status !== shopProfile.statuses.at(-2)
   ).length;
+
+  if (authState.mustChangePassword) {
+    return null;
+  }
 
   if (!workspaceLoaded) {
     return (

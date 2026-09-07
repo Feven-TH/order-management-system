@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireSuperadmin } from '@/lib/auth/guards';
+import { requireTenant } from '@/lib/auth/tenant';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 function adminsRedirect(params: Record<string, string>) {
@@ -11,6 +12,7 @@ function adminsRedirect(params: Record<string, string>) {
 }
 
 export async function createAdmin(formData: FormData) {
+  await requireTenant();
   await requireSuperadmin();
 
   const email = String(formData.get('email') || '').trim().toLowerCase();
@@ -57,6 +59,7 @@ export async function createAdmin(formData: FormData) {
 
 /** Creates a tenant owner without granting any platform-admin privileges. */
 export async function createTenantOwner(formData: FormData) {
+  await requireTenant();
   await requireSuperadmin();
 
   const businessName = String(formData.get('business_name') || '').trim();
@@ -98,6 +101,7 @@ export async function createTenantOwner(formData: FormData) {
 }
 
 export async function removeAdmin(formData: FormData) {
+  await requireTenant();
   const currentAdmin = await requireSuperadmin();
   const adminId = String(formData.get('admin_id') || '');
 

@@ -32,11 +32,16 @@ Do **not** use **Invite admin** for a shop owner. That option gives the recipien
 platform administration privileges; it is only for staff who should manage
 `/admins`.
 
-## Self-service signup
+## Provisioning and first login
 
-A shop can alternatively register at `/signup`. The result is identical: the
-new account owns one newly-created business. The business name entered on the
-form is used for the tenant's name.
+Public registration is disabled. A superadmin provisions every tenant owner
+from `/admins`; the supplied password is temporary. The owner is redirected to
+the required password-update screen immediately after their first login and
+cannot open the workspace until that password is changed.
+
+In Supabase Dashboard, disable **Authentication → General Configuration → Allow
+new users to sign up**. Removing the app's signup screen alone does not disable
+the public Auth API.
 
 ## How isolation is enforced
 

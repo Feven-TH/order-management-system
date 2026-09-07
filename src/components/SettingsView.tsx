@@ -28,6 +28,7 @@ import {
   generateAccessibleTheme,
   applyThemeToDocument,
 } from '../utils/themeGenerator';
+import { createClient } from '../lib/supabase/client';
 
 interface SettingsViewProps {
   shopProfile: ShopProfile;
@@ -54,8 +55,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [savedToast, setSavedToast] = useState(false);
   const [configurationNotice, setConfigurationNotice] = useState<string | null>(null);
   const [isSavingConfigurations, setIsSavingConfigurations] = useState(false);
-  const [accountNotice, setAccountNotice] = useState<string | null>(null);
+  const [accountNotice, setAccountNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isAnalyzingLogo, setIsAnalyzingLogo] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     setWorkflowDraft(shopProfile.statuses);
@@ -211,6 +215,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     });
   };
 
+  const showAccountNotice = (notice: { type: 'success' | 'error'; message: string }) => {
+    setAccountNotice(notice);
+    window.setTimeout(() => setAccountNotice(null), 4000);
+  };
+
+  const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAccountNotice(null);
+
+    if (newPassword.length < 8) {
+      showAccountNotice({ type: 'error', message: 'Use at least 8 characters for your new password.' });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      showAccountNotice({ type: 'error', message: 'The passwords do not match.' });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    const { error } = await createClient().auth.updateUser({ password: newPassword });
+    setIsChangingPassword(false);
+
+    if (error) {
+      showAccountNotice({ type: 'error', message: error.message });
+      return;
+    }
+
+    setNewPassword('');
+    setConfirmNewPassword('');
+    showAccountNotice({ type: 'success', message: 'Your password has been updated.' });
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-8 space-y-8 animate-fadeIn pb-20">
       {/* Header */}
@@ -236,8 +273,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {accountNotice && (
-        <div role="status" className="p-3 bg-green-100 text-green-900 text-xs font-bold rounded-lg border border-green-300 flex items-center gap-2 shadow-sm animate-fadeIn">
-          <Check className="w-4 h-4" /> {accountNotice}
+        <div role="status" className={`p-3 text-xs font-bold rounded-lg border flex items-center gap-2 shadow-sm animate-fadeIn ${accountNotice.type === 'error' ? 'bg-red-100 text-red-900 border-red-300' : 'bg-green-100 text-green-900 border-green-300'}`}>
+          <Check className="w-4 h-4" /> {accountNotice.message}
         </div>
       )}
 
@@ -748,26 +785,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </span>
         </div>
 
-        <div className="pt-4 border-t border-[#d7c3b2]/20 flex justify-between items-center">
-          <button
-            type="button"
-            onClick={() => {
-              setAccountNotice('Password reset verification email sent.');
-              window.setTimeout(() => setAccountNotice(null), 2500);
-            }}
-            className="text-xs font-bold text-[#885000] hover:underline"
-          >
-            Change Workshop Password
-          </button>
+        <form onSubmit={handleChangePassword} className="pt-4 border-t border-[#d7c3b2]/20 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
+              New Password
+              <input
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal"
+              />
+            </label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
+              Confirm Password
+              <input
+                value={confirmNewPassword}
+                onChange={(event) => setConfirmNewPassword(event.target.value)}
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal"
+              />
+            </label>
+          </div>
 
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="px-4 py-2 bg-red-50 text-[#ba1a1a] hover:bg-red-100 text-xs font-bold rounded-lg border border-red-200 flex items-center gap-1.5 transition-all"
-          >
-            <LogOut className="w-3.5 h-3.5" /> Sign Out
-          </button>
-        </div>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <button type="submit" disabled={isChangingPassword} className="w-fit px-4 py-2 bg-[#885000] hover:bg-[#a6681c] disabled:cursor-not-allowed disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-all">
+              {isChangingPassword ? 'Updating Password…' : 'Change Password'}
+            </button>
+            <button type="button" onClick={onSignOut} className="w-fit px-4 py-2 bg-red-50 text-[#ba1a1a] hover:bg-red-100 text-xs font-bold rounded-lg border border-red-200 flex items-center gap-1.5 transition-all">
+              <LogOut className="w-3.5 h-3.5" /> Sign Out
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

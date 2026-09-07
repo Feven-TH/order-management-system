@@ -9,6 +9,7 @@ export interface TenantContext {
   businessName: string;
   email: string;
   role: BusinessRole;
+  mustChangePassword: boolean;
 }
 
 /**
@@ -37,7 +38,7 @@ export async function getCurrentTenant(): Promise<TenantContext | null> {
 
   const { data: business, error: businessError } = await supabase
     .from('businesses')
-    .select('id, name, email')
+    .select('id, name, email, must_change_password')
     .eq('id', membership.business_id)
     .single();
 
@@ -51,6 +52,7 @@ export async function getCurrentTenant(): Promise<TenantContext | null> {
     businessName: business.name,
     email: business.email || String(claims.email || ''),
     role: membership.role as BusinessRole,
+    mustChangePassword: business.must_change_password,
   };
 }
 
@@ -61,6 +63,9 @@ export async function requireTenant(): Promise<TenantContext> {
     redirect('/login');
   }
 
+  if (tenant.mustChangePassword) {
+    redirect('/update-password');
+  }
+
   return tenant;
 }
-

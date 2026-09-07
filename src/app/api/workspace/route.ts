@@ -40,7 +40,7 @@ function errorResponse(error: unknown, status = 400) {
 async function requireWorkspaceRequest() {
   const tenant = await getCurrentTenant();
 
-  if (!tenant) {
+  if (!tenant || tenant.mustChangePassword) {
     return null;
   }
 

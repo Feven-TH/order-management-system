@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { Lock, Mail, Scissors } from 'lucide-react';
 import { getCurrentTenant } from '@/lib/auth/tenant';
 import { signIn } from './actions';
@@ -89,12 +88,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-[#524438] dark:text-[#d7c3b2]">
-          New to AtelierOS?{' '}
-          <Link href="/signup" className="font-semibold text-[#885000] dark:text-[#ffb86d] hover:underline">
-            Create your business
-          </Link>
-        </p>
       </section>
     </main>
   );

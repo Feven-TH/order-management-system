@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { requireSuperadmin } from '@/lib/auth/guards';
+import { requireTenant } from '@/lib/auth/tenant';
 import { createClient } from '@/lib/supabase/server';
 import { createAdmin, createTenantOwner, removeAdmin } from './actions';
 
@@ -14,6 +15,7 @@ interface AdminsPageProps {
 }
 
 export default async function AdminsPage({ searchParams }: AdminsPageProps) {
+  await requireTenant();
   const currentAdmin = await requireSuperadmin();
   const params = await searchParams;
   const supabase = await createClient();
@@ -61,7 +63,7 @@ export default async function AdminsPage({ searchParams }: AdminsPageProps) {
         <section className="mb-8 rounded-lg border border-[#d7c3b2]/50 dark:border-[#524438] bg-white dark:bg-[#1c1510] p-5">
           <h2 className="font-headline text-lg font-bold">Create tenant owner</h2>
           <p className="mt-1 text-sm text-[#524438] dark:text-[#d7c3b2]">
-            Creates a separate business workspace with the password you set. This person is not a platform admin.
+            Creates a separate business workspace with the temporary password you set. They must change it at first login. This person is not a platform admin.
           </p>
           <form action={createTenantOwner} className="mt-4 grid gap-3 sm:grid-cols-2">
             <input

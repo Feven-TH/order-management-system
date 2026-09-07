@@ -1,8 +1,8 @@
 # Supabase Setup
 
-This app uses Supabase Auth with a business as the tenant root. Every Auth user
-receives one owned business, a membership, and a default theme through a database
-trigger at signup.
+This app uses Supabase Auth with a business as the tenant root. Every
+admin-provisioned Auth user receives one owned business, a membership, and a
+default theme through a database trigger.
 
 ## Environment
 
@@ -26,6 +26,14 @@ Supabase CLI:
 2. `supabase/migrations/202608280001_multi_tenancy.sql`
 3. `supabase/migrations/202608280002_partner_payments.sql`
 4. `supabase/migrations/202608280003_set_user_password.sql`
+5. `supabase/migrations/20260831121221_add_order_materials.sql`
+6. `supabase/migrations/20260831123355_add_business_workflow_configuration.sql`
+7. `supabase/migrations/20260903000000_add_customer_measurement_profiles.sql`
+8. `supabase/migrations/20260907000000_add_must_change_password.sql`
 
-Then create the first shop at `/signup`. RLS and composite foreign keys prevent
-one business from reading or linking to another business's data.
+Then sign in as a superadmin and create shops through `/admins`. RLS and
+composite foreign keys prevent one business from reading or linking to another
+business's data.
+
+Also disable **Authentication → General Configuration → Allow new users to sign
+up** in the Supabase Dashboard. This prevents public Auth API registration.
