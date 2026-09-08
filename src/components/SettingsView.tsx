@@ -57,6 +57,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isSavingConfigurations, setIsSavingConfigurations] = useState(false);
   const [accountNotice, setAccountNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isAnalyzingLogo, setIsAnalyzingLogo] = useState(false);
+  const [isPasswordFormOpen, setIsPasswordFormOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -220,9 +222,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     window.setTimeout(() => setAccountNotice(null), 4000);
   };
 
+  const resetPasswordForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setIsPasswordFormOpen(false);
+  };
+
   const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setAccountNotice(null);
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      showAccountNotice({ type: 'error', message: 'Complete all password fields.' });
+      return;
+    }
 
     if (newPassword.length < 8) {
       showAccountNotice({ type: 'error', message: 'Use at least 8 characters for your new password.' });
@@ -230,22 +244,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
 
     if (newPassword !== confirmNewPassword) {
-      showAccountNotice({ type: 'error', message: 'The passwords do not match.' });
+      showAccountNotice({ type: 'error', message: 'New passwords do not match' });
+      return;
+    }
+
+    if (newPassword === currentPassword) {
+      showAccountNotice({ type: 'error', message: 'New password cannot be the same as your current password' });
       return;
     }
 
     setIsChangingPassword(true);
-    const { error } = await createClient().auth.updateUser({ password: newPassword });
-    setIsChangingPassword(false);
+    const supabase = createClient();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
 
-    if (error) {
-      showAccountNotice({ type: 'error', message: error.message });
+    if (userError || !userData.user?.email) {
+      setIsChangingPassword(false);
+      showAccountNotice({ type: 'error', message: 'Could not verify the current user. Please sign in again.' });
       return;
     }
 
-    setNewPassword('');
-    setConfirmNewPassword('');
-    showAccountNotice({ type: 'success', message: 'Your password has been updated.' });
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: userData.user.email,
+      password: currentPassword,
+    });
+
+    if (verifyError) {
+      setIsChangingPassword(false);
+      showAccountNotice({ type: 'error', message: 'Incorrect current password' });
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setIsChangingPassword(false);
+
+    if (updateError) {
+      showAccountNotice({ type: 'error', message: updateError.message });
+      return;
+    }
+
+    resetPasswordForm();
+    showAccountNotice({ type: 'success', message: 'Password updated successfully' });
   };
 
   return (
@@ -785,43 +823,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </span>
         </div>
 
-        <form onSubmit={handleChangePassword} className="pt-4 border-t border-[#d7c3b2]/20 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
-              New Password
-              <input
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-                className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal"
-              />
-            </label>
-            <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
-              Confirm Password
-              <input
-                value={confirmNewPassword}
-                onChange={(event) => setConfirmNewPassword(event.target.value)}
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-                className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal"
-              />
-            </label>
-          </div>
+        <div className="pt-4 border-t border-[#d7c3b2]/20 space-y-4">
+          {isPasswordFormOpen ? (
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
+                  Current Password
+                  <input value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} type="password" autoComplete="current-password" required className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal" />
+                </label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
+                  New Password
+                  <input value={newPassword} onChange={(event) => setNewPassword(event.target.value)} type="password" autoComplete="new-password" minLength={8} required className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal" />
+                </label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
+                  Confirm New Password
+                  <input value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} type="password" autoComplete="new-password" minLength={8} required className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal" />
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button type="submit" disabled={isChangingPassword} className="px-4 py-2 bg-[#885000] hover:bg-[#a6681c] disabled:cursor-not-allowed disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-all">
+                  {isChangingPassword ? 'Saving Password…' : 'Save Password'}
+                </button>
+                <button type="button" onClick={resetPasswordForm} disabled={isChangingPassword} className="px-4 py-2 border border-[#d7c3b2] hover:bg-[#fff1e7] disabled:cursor-not-allowed disabled:opacity-60 text-xs font-bold rounded-lg transition-all dark:border-[#524438] dark:hover:bg-[#33261c]">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button type="button" onClick={() => setIsPasswordFormOpen(true)} className="px-4 py-2 bg-[#885000] hover:bg-[#a6681c] text-white text-xs font-bold rounded-lg transition-all">
+              Change Password
+            </button>
+          )}
 
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <button type="submit" disabled={isChangingPassword} className="w-fit px-4 py-2 bg-[#885000] hover:bg-[#a6681c] disabled:cursor-not-allowed disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-all">
-              {isChangingPassword ? 'Updating Password…' : 'Change Password'}
-            </button>
-            <button type="button" onClick={onSignOut} className="w-fit px-4 py-2 bg-red-50 text-[#ba1a1a] hover:bg-red-100 text-xs font-bold rounded-lg border border-red-200 flex items-center gap-1.5 transition-all">
-              <LogOut className="w-3.5 h-3.5" /> Sign Out
-            </button>
-          </div>
-        </form>
+          <button type="button" onClick={onSignOut} className="w-fit px-4 py-2 bg-red-50 text-[#ba1a1a] hover:bg-red-100 text-xs font-bold rounded-lg border border-red-200 flex items-center gap-1.5 transition-all">
+            <LogOut className="w-3.5 h-3.5" /> Sign Out
+          </button>
+        </div>
       </div>
     </div>
   );
