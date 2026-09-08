@@ -3,7 +3,9 @@ import { ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { requireSuperadmin } from '@/lib/auth/guards';
 import { requireTenant } from '@/lib/auth/tenant';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createAdmin, createTenantOwner, removeAdmin } from './actions';
+import { TenantDirectory } from './tenant-directory';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +25,28 @@ export default async function AdminsPage({ searchParams }: AdminsPageProps) {
     .from('admin_profiles')
     .select('id, email, full_name, role, active, created_at')
     .order('created_at', { ascending: false });
+  const adminClient = createAdminClient();
+  const [{ data: businesses = [] }, { data: ownerMemberships = [] }] = await Promise.all([
+    adminClient
+      .from('businesses')
+      .select('id, name, email, is_active, created_at')
+      .order('created_at', { ascending: false }),
+    adminClient
+      .from('business_members')
+      .select('business_id, full_name, role')
+      .eq('role', 'owner'),
+  ]);
+  const ownerNameByBusiness = new Map(
+    ownerMemberships.map((membership) => [membership.business_id, membership.full_name as string | null])
+  );
+  const tenants = businesses.map((business) => ({
+    id: business.id,
+    name: business.name,
+    email: business.email,
+    primaryUser: ownerNameByBusiness.get(business.id) || null,
+    isActive: business.is_active,
+    createdAt: business.created_at,
+  }));
 
   return (
     <main className="min-h-screen bg-[#fff8f4] dark:bg-[#150f0b] text-[#211a15] dark:text-[#f7ebe1]">
@@ -142,6 +166,8 @@ export default async function AdminsPage({ searchParams }: AdminsPageProps) {
             </button>
           </form>
         </section>
+
+        <TenantDirectory tenants={tenants} />
 
         <section className="overflow-hidden rounded-lg border border-[#d7c3b2]/50 dark:border-[#524438] bg-white dark:bg-[#1c1510]">
           <div className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-[#d7c3b2]/50 dark:border-[#524438] px-4 py-3 text-xs font-bold uppercase text-[#524438] dark:text-[#d7c3b2]">

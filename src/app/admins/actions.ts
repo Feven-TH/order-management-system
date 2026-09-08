@@ -11,6 +11,54 @@ function adminsRedirect(params: Record<string, string>) {
   redirect(`/admins?${query.toString()}`);
 }
 
+export type ToggleTenantStatusResult =
+  | { ok: true; tenant: { id: string; name: string; isActive: boolean } }
+  | { ok: false; error: string };
+
+/** Changes a tenant's access state without exposing the service-role key. */
+export async function toggleTenantStatus(businessId: string): Promise<ToggleTenantStatusResult> {
+  const currentTenant = await requireTenant();
+  await requireSuperadmin();
+
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(businessId)) {
+    return { ok: false, error: 'Invalid workspace identifier.' };
+  }
+
+  // Losing this workspace would also lock the currently signed-in superadmin
+  // out of the directory, leaving no way to restore it from the application.
+  if (businessId === currentTenant.businessId) {
+    return { ok: false, error: 'You cannot deactivate the workspace attached to your current superadmin session.' };
+  }
+
+  const supabase = createAdminClient();
+  const { data: target, error: targetError } = await supabase
+    .from('businesses')
+    .select('id, name, is_active')
+    .eq('id', businessId)
+    .single();
+
+  if (targetError || !target) {
+    return { ok: false, error: 'Workspace not found.' };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from('businesses')
+    .update({ is_active: !target.is_active })
+    .eq('id', target.id)
+    .select('id, name, is_active')
+    .single();
+
+  if (updateError || !updated) {
+    return { ok: false, error: updateError?.message || 'Could not update workspace status.' };
+  }
+
+  revalidatePath('/admins');
+  return {
+    ok: true,
+    tenant: { id: updated.id, name: updated.name, isActive: updated.is_active },
+  };
+}
+
 export async function createAdmin(formData: FormData) {
   await requireTenant();
   await requireSuperadmin();
