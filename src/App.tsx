@@ -688,9 +688,7 @@ export default function App({ businessName, userEmail, mustChangePassword, canMa
               setShopProfile((current) => ({ ...current, ...config }));
               return true;
             }}
-            onSignOut={() => {
-              window.location.href = '/logout';
-            }}
+           
             onExportExcel={handleExportExcel}
           />
         )}
