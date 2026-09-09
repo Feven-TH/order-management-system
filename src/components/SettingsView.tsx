@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Settings,
   Camera,
   Save,
   Plus,
@@ -9,19 +8,17 @@ import {
   Moon,
   Sun,
   Shield,
-  LogOut,
   Sliders,
-  DollarSign,
-  User,
   Scissors,
   FileSpreadsheet,
-  Download,
-  Sparkles,
   RefreshCw,
   ShieldCheck,
   Palette,
   Upload,
+  Lock,
+  AlertCircle
 } from 'lucide-react';
+
 import { BusinessTheme, ShopProfile } from '../types';
 import {
   extractColorsFromLogo,
@@ -34,7 +31,6 @@ interface SettingsViewProps {
   shopProfile: ShopProfile;
   onUpdateProfile: (updated: ShopProfile) => void;
   onSaveConfigurations: (config: Pick<ShopProfile, 'statuses' | 'measurementFields'>) => Promise<boolean>;
-  onSignOut: () => void;
   onExportExcel?: () => void;
 }
 
@@ -42,7 +38,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   shopProfile,
   onUpdateProfile,
   onSaveConfigurations,
-  onSignOut,
   onExportExcel,
 }) => {
   const [profileDraft, setProfileDraft] = useState<ShopProfile>(shopProfile);
@@ -310,11 +305,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {accountNotice && (
-        <div role="status" className={`p-3 text-xs font-bold rounded-lg border flex items-center gap-2 shadow-sm animate-fadeIn ${accountNotice.type === 'error' ? 'bg-red-100 text-red-900 border-red-300' : 'bg-green-100 text-green-900 border-green-300'}`}>
-          <Check className="w-4 h-4" /> {accountNotice.message}
-        </div>
-      )}
 
       {/* Workshop Profile Form */}
       <form
@@ -801,7 +791,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           )}
         </div>
       </div>
-
+       
       {/* Account & Security */}
       <div className="bg-white dark:bg-[#241a13] rounded-xl border border-[#d7c3b2]/20 dark:border-[#524438] shadow-sm p-6 space-y-4">
         <h2 className="font-headline font-bold text-lg text-[#211a15] dark:text-white border-b border-[#d7c3b2]/20 pb-3 flex items-center gap-2">
@@ -809,55 +799,136 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           Account & Security
         </h2>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
-          <div>
-            <p className="font-headline font-bold text-sm text-[#211a15] dark:text-white">
-              Two-Factor Authentication
-            </p>
-            <p className="text-xs text-[#524438] dark:text-[#d7c3b2]">
-              Protect client measurements and trade billing secrets with SMS verification.
-            </p>
+        {/* Password Section */}
+        <div>
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div>
+              <p className="font-headline font-bold text-sm text-[#211a15] dark:text-white">
+                Password
+              </p>
+              <p className="text-xs text-[#524438] dark:text-[#d7c3b2]">
+                Update your login credentials.
+              </p>
+            </div>
+            
+            {/* The Initial Button */}
+            {!isPasswordFormOpen && (
+              <button 
+                type="button" 
+                onClick={() => setIsPasswordFormOpen(true)} 
+                className="w-fit px-4 py-2 bg-transparent text-[#885000] border border-[#885000] hover:bg-[#fff8f4] dark:hover:bg-[#33261c] text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 mt-2 sm:mt-0"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                Change Password
+              </button>
+            )}
           </div>
-          <span className="px-3 py-1 bg-green-50 text-green-800 text-xs font-bold rounded-full border border-green-200">
-            Enabled
-          </span>
-        </div>
 
-        <div className="pt-4 border-t border-[#d7c3b2]/20 space-y-4">
-          {isPasswordFormOpen ? (
-            <form onSubmit={handleChangePassword} className="space-y-3">
+          {/* The Expanded Form */}
+          {isPasswordFormOpen && (
+            <form onSubmit={handleChangePassword} className="space-y-4 mt-5">
               <div className="grid gap-3 sm:grid-cols-3">
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
-                  Current Password
-                  <input value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} type="password" autoComplete="current-password" required className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal" />
-                </label>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
-                  New Password
-                  <input value={newPassword} onChange={(event) => setNewPassword(event.target.value)} type="password" autoComplete="new-password" minLength={8} required className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal" />
-                </label>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
-                  Confirm New Password
-                  <input value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} type="password" autoComplete="new-password" minLength={8} required className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal" />
-                </label>
+                {/* Current Password Field */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
+                    Current Password
+                  </label>
+                  <input 
+                    value={currentPassword} 
+                    onChange={(event) => setCurrentPassword(event.target.value)} 
+                    type="password" 
+                    autoComplete="current-password" 
+                    required 
+                    className="mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border border-[#d7c3b2]/30 rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal" 
+                  />
+                </div>
+
+                {/* New Password Field */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
+                    New Password
+                  </label>
+                  <input 
+                    value={newPassword} 
+                    onChange={(event) => setNewPassword(event.target.value)} 
+                    type="password" 
+                    autoComplete="new-password" 
+                    required 
+                    className={`mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal ${
+                      (newPassword.length > 0 && newPassword.length < 8) || (newPassword.length > 0 && newPassword === currentPassword)
+                        ? 'border-red-500 focus:ring-red-500' 
+                        : 'border-[#d7c3b2]/30'
+                    }`} 
+                  />
+                  {/* Inline Errors for New Password */}
+                  {newPassword.length > 0 && newPassword.length < 8 && (
+                    <p className="text-[11px] font-semibold text-[#ba1a1a] flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3" /> Min 8 characters
+                    </p>
+                  )}
+                  {newPassword.length > 0 && newPassword === currentPassword && (
+                    <p className="text-[11px] font-semibold text-[#ba1a1a] flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3" /> Must be different from current
+                    </p>
+                  )}
+                </div>
+
+                {/* Confirm Password Field */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#524438] dark:text-[#d7c3b2]">
+                    Confirm New Password
+                  </label>
+                  <input 
+                    value={confirmNewPassword} 
+                    onChange={(event) => setConfirmNewPassword(event.target.value)} 
+                    type="password" 
+                    autoComplete="new-password" 
+                    required 
+                    className={`mt-1.5 w-full px-3 py-2 bg-[#fff8f4] dark:bg-[#1a120c] border rounded-lg text-sm text-[#211a15] dark:text-white normal-case tracking-normal ${
+                      confirmNewPassword.length > 0 && confirmNewPassword !== newPassword 
+                        ? 'border-red-500 focus:ring-red-500' 
+                        : 'border-[#d7c3b2]/30'
+                    }`} 
+                  />
+                  {/* Inline Error for Confirm Password */}
+                  {confirmNewPassword.length > 0 && confirmNewPassword !== newPassword && (
+                    <p className="text-[11px] font-semibold text-[#ba1a1a] flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3" /> Passwords do not match
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <button type="submit" disabled={isChangingPassword} className="px-4 py-2 bg-[#885000] hover:bg-[#a6681c] disabled:cursor-not-allowed disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-all">
-                  {isChangingPassword ? 'Saving Password…' : 'Save Password'}
-                </button>
+
+              {/* INLINE FORM NOTIFICATION (Server/Auth Errors & Success) */}
+              {accountNotice && (
+                <div 
+                  role="alert" 
+                  className={`p-3 text-xs font-bold rounded-lg border flex items-start gap-2 shadow-sm animate-fadeIn ${
+                    accountNotice.type === 'error' 
+                      ? 'bg-red-50 text-[#ba1a1a] border-red-200 dark:bg-red-950/30 dark:border-red-900/50' 
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900/50'
+                  }`}
+                >
+                  {accountNotice.type === 'error' ? (
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  ) : (
+                    <Check className="w-4 h-4 shrink-0 mt-0.5" />
+                  )}
+                  <span>{accountNotice.message}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3 justify-end pt-2">
                 <button type="button" onClick={resetPasswordForm} disabled={isChangingPassword} className="px-4 py-2 border border-[#d7c3b2] hover:bg-[#fff1e7] disabled:cursor-not-allowed disabled:opacity-60 text-xs font-bold rounded-lg transition-all dark:border-[#524438] dark:hover:bg-[#33261c]">
                   Cancel
                 </button>
+                <button type="submit" disabled={isChangingPassword} className="px-4 py-2 bg-[#885000] hover:bg-[#a6681c] disabled:cursor-not-allowed disabled:opacity-60 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  {isChangingPassword ? 'Saving Password…' : 'Save Password'}
+                </button>
               </div>
             </form>
-          ) : (
-            <button type="button" onClick={() => setIsPasswordFormOpen(true)} className="px-4 py-2 bg-[#885000] hover:bg-[#a6681c] text-white text-xs font-bold rounded-lg transition-all">
-              Change Password
-            </button>
           )}
-
-          <button type="button" onClick={onSignOut} className="w-fit px-4 py-2 bg-red-50 text-[#ba1a1a] hover:bg-red-100 text-xs font-bold rounded-lg border border-red-200 flex items-center gap-1.5 transition-all">
-            <LogOut className="w-3.5 h-3.5" /> Sign Out
-          </button>
         </div>
       </div>
     </div>
